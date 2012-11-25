@@ -2,6 +2,10 @@
 var intervals = require('./intervals');
 var _ = require('underscore');
 
+var use_lantern = false;
+var lantern_angle = 0;
+var lantern_aperture = 1;
+
 // raycast:
 // (x,y) = (r cos theta, r sin theta)
 //    +-------+-------+-/-----+ 
@@ -75,6 +79,7 @@ var extent_memo = {};
 function memo_key(n,m) {
     return n + "_" + m;
 }
+
 function angle(n,m) {
     // Scale n and m down to their
     // smallest ratio. This helps to 
@@ -200,7 +205,35 @@ function exitIntervals(n,m) {
 
 var display = [];
 var map = [];
+var map_visible = [];
+for(i=0;i<30;++i){ 
+    map_visible[i]=[]; 
+    for(j=0;j<30;++j) {
+	map_visible[i][j] = false;
+    }
+}
 
+function clear_visible() {
+    for(i=0;i<30;++i){ 
+	for(j=0;j<30;++j) {
+	    map_visible[i][j] = false;
+	}
+    }
+}
+
+function visible(x,y) {
+    map_visible[y][x] = true;
+}
+
+function highlight_visible(window) {
+    for(i=0;i<30;++i){ 
+	for(j=0;j<30;++j) {
+	    if( map_visible[i][j] ) {
+		window.chgat( i+1, j+1, 1, nc.attrs.REVERSE  );
+	    }
+	}
+    }
+}    
 // The following are all of the operations that comprise the
 // group formed by 90' rotations and reflections about the x
 // and y axes.
@@ -282,7 +315,7 @@ function process_rays_vertical_mirror(job) {
     refInterval = intervals.intersection(job.i, refInterval );
     
     if( refInterval.length > 0) {// && N != job.r[0] ) {
-	var ref_tform = xtable[1][job.t];
+	var ref_tform = xtable[job.t][1];
 	// xform[3] is -1
 	var ref_d = transform( job.x, xtable[3][ref_tform], job.m );
 	result.ivs =[ { i: refInterval, t: ref_tform, d: ref_d, r: [N, job.r[1]] }, // reflect what hit the mirror
@@ -308,7 +341,7 @@ function process_rays_horizontal_mirror(job) {
     refInterval = intervals.intersection(job.i, refInterval );
     
     if( refInterval.length > 0 ) {//&& M != job.r[1] ) {
-	var ref_tform = xtable[2][job.t];
+	var ref_tform = xtable[job.t][2];
 	// xform[3] is -1
 	var ref_d = transform( job.x, xtable[3][ref_tform], job.m );
 	result.ivs =[ { i: refInterval, t: ref_tform, d: ref_d, r: [job.r[0], M] }, // reflect what hit the mirror
@@ -339,10 +372,10 @@ function process_rays_slash_mirror(job) {
 	var ref_d = transform( job.x, xtable[3][ref_tform], job.m );
 	result.ivs =[ { i: refInterval, t: ref_tform, d: ref_d }, // reflect what hit the mirror
 		      { i: intervals.difference( job.i, refInterval ) } ]           // transmit the rest
+
     } else {
 	result.ivs = [ {i: job.i} ];
     }
-    
     result.display = ['/','\\','\\','/','\\','\\','/','/'][job.t];
 
     return result;
@@ -372,7 +405,7 @@ function process_rays_plus_mirror(job) {
     
     result.ivs = _.map( [noneInterval, hInterval, vInterval, bothInterval ], // order important!
 			function( iv, t ) {
-			    var new_tform = xtable[t][ job.t ];
+			    var new_tform = xtable[ job.t ][t];
 			    var new_d = transform( job.x, xtable[3][new_tform], job.m );
 			    var new_lastH = (t == 0 || t == 2) ? job.r[0] : N;
 			    var new_lastV = (t == 0 || t == 1) ? job.r[1] : M;
@@ -403,8 +436,16 @@ function vision(n,m) {
     } 
 
     var queue = [];
-             
-    queue.push( {i: [-Math.PI, Math.PI], x:[0,0], t:0, d: [n,m], r:[null, null], c:[1,1,1] } );
+      
+    var initial_interval = [-Math.PI, Math.PI ];
+
+    var lantern_interval = intervals.boundingInterval( lantern_angle + lantern_aperture, lantern_angle - lantern_aperture );
+    
+    if( use_lantern ) {
+	initial_interval = intervals.intersection( initial_interval, lantern_interval );
+    }
+    
+    queue.push( {i: initial_interval, x:[0,0], t:0, d: [n,m], r:[null, null], c:[1,1,1] } );
     
     while(queue.length > 0 ) {
 	var job = queue.shift();
@@ -446,6 +487,7 @@ function vision(n,m) {
 	}
 
 	var chr = map[y][x];
+	visible(x,y);
 
 	if( !ray_processor[chr] ) 
 	    chr = 'default';
@@ -536,7 +578,9 @@ function vision(n,m) {
 	}
 */
 
-	display[Y][X] = processed.display;
+	if( processed.display )
+	    display[Y][X] = processed.display;
+
 	processed.ivs.forEach( function( iv_plus ) {
 	    var exits = exitIntervals( N, M );
 	    exits.forEach( function(exit) {
@@ -589,8 +633,10 @@ map[7][7] = '|';
 map[6][7] = '|';
 
 map[6][20] = '-';
-map[7][20] = '/';
 map[7][17] = '|';
+map[7][20] = '/';
+map[8][19] = '/';
+map[6][21] = '/';
 
 
 map[29][29] = '@';
@@ -619,7 +665,6 @@ function move(dx, dy) {
     map[old_y][old_x] = ' ';
     map[actor[1]][actor[0]] = '@';
 
-    vision( actor[0], actor[1] );
 }
 
 for(var i = 6; i< 26; i+=2)
@@ -674,8 +719,31 @@ function onInput(charStr, charCode, isKey) {
     if(charStr == 'n') {
 	move(1,1);
     }
-	
+
+    if(charStr == 'x') {
+	use_lantern = !use_lantern;
+    }
+    if(charStr == 'd') {
+	lantern_aperture = lantern_aperture / 2.0;
+    }
+    if(charStr == 'e') {
+	lantern_aperture = lantern_aperture * 2.0;
+	if(lantern_aperture > 1)
+	    lantern_aperture = 1;
+    }
+    if(charStr == 's') {
+	lantern_angle += lantern_aperture / 2.0;
+	if(lantern_angle > Math.PI)
+	    lantern_angle -= 2*Math.PI
+    }
+    if(charStr == 'a') {
+	lantern_angle -= lantern_aperture / 2.0;
+	if(lantern_angle < -Math.PI)
+	    lantern_angle += 2*Math.PI
+    }
     
+    clear_visible();
+    vision( actor[0], actor[1] );
 
     viewWin.clear();
     for(var i=0; i<30; ++i) {
@@ -686,6 +754,7 @@ function onInput(charStr, charCode, isKey) {
     for(var i=0; i<30; ++i) {
 	displayWin.addstr(i+1,1, map[i].join("")  );
     }
+    highlight_visible( displayWin );
 
     viewWin.frame();
     displayWin.frame();
