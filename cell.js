@@ -229,7 +229,7 @@ function highlight_visible(window) {
     for(i=0;i<30;++i){ 
 	for(j=0;j<30;++j) {
 	    if( map_visible[i][j] ) {
-		window.chgat( i+1, j+1, 1, nc.attrs.REVERSE  );
+		window.chgat( i+1, j+1, 1, nc.attrs.NORMAL, 128  );
 	    }
 	}
     }
@@ -260,6 +260,18 @@ var xtable =
       [5,7,6,4,0,3,1,2],
       [6,4,5,7,1,2,0,3],
       [7,5,4,6,2,1,3,0] ];
+
+// This table shows how mirrors transform under the group of eight. We
+// need this because light will interact with the transformed mirror
+// instead of the actual mirror as seen on the map.
+var mirror_transforms =
+    { '|':  [ '|',  '|',  '|',  '|',  '-',  '-',  '-',  '-' ],
+      '-':  [ '-',  '-',  '-',  '-',  '|',  '|',  '|',  '|' ],
+      '+':  [ '+',  '+',  '+',  '+',  '+',  '+',  '+',  '+' ],
+      '/':  [ '/', '\\', '\\',  '/', '\\', '\\',  '/',  '/' ],
+      '\\': ['\\',  '/',  '/', '\\',  '/',  '/', '\\', '\\' ]
+    };
+
 
 function transform( x, t, d) {
     tf = xforms[t];
@@ -324,10 +336,7 @@ function process_rays_vertical_mirror(job) {
 	result.ivs = [ {i: job.i} ];
     }
     
-    if( job.t < 4 )
-	result.display = '|'; // unrotated mirror
-    else
-	result.display = "-"; // rotated mirror
+    result.display = '|';
 
     return result;
 }
@@ -350,11 +359,8 @@ function process_rays_horizontal_mirror(job) {
 	result.ivs = [ {i: job.i} ];
     }
     
-    if( job.t < 4 )
-	result.display = '-'; // unrotated mirror
-    else
-	result.display = "|"; // rotated mirror
-
+    result.display = '-'; // unrotated mirror
+    
     return result;
 }
 
@@ -376,7 +382,30 @@ function process_rays_slash_mirror(job) {
     } else {
 	result.ivs = [ {i: job.i} ];
     }
-    result.display = ['/','\\','\\','/','\\','\\','/','/'][job.t];
+    result.display = '/';
+
+    return result;
+}
+
+function process_rays_bash_mirror(job) {
+    var result = {};
+
+    var N = job.x[0];
+    var M = job.x[1];
+    var refInterval = intervals.boundingInterval( vertex_angle(N-1, M-1), vertex_angle(N, M) );
+    refInterval = intervals.intersection(job.i, refInterval );
+    
+    if( refInterval.length > 0 ) {
+	var ref_tform = xtable[job.t][6];
+	// xform[3] is -1
+	var ref_d = transform( job.x, xtable[3][ref_tform], job.m );
+	result.ivs =[ { i: refInterval, t: ref_tform, d: ref_d }, // reflect what hit the mirror
+		      { i: intervals.difference( job.i, refInterval ) } ]           // transmit the rest
+
+    } else {
+	result.ivs = [ {i: job.i} ];
+    }
+    result.display = '\\';
 
     return result;
 }
@@ -416,14 +445,28 @@ function process_rays_plus_mirror(job) {
     return result;
 }
 
+var mirror_actions =
+    { '|':  process_rays_vertical_mirror,
+      '-':  process_rays_horizontal_mirror,
+      '+':  process_rays_plus_mirror,
+      '/':  process_rays_slash_mirror,
+      '\\': process_rays_bash_mirror
+    }
+
+function process_mirror(job) {
+    var mirror = mirror_transforms[ job.a ][ job.t ];
+    return mirror_actions[ mirror ](job);
+}
+
 var ray_processor = {
     '#': process_rays_wall,
     '@': process_rays_player,
-    '+': process_rays_plus_mirror,
-    '-': process_rays_horizontal_mirror,
-    '|': process_rays_vertical_mirror,
     'o': process_rays_occluding_center,
-    '/': process_rays_slash_mirror,
+    '+': process_mirror,
+    '-': process_mirror,
+    '|': process_mirror,
+    '/': process_mirror,
+    '\\': process_mirror,
     'default': process_rays_other
 };
 
@@ -481,12 +524,13 @@ function vision(n,m) {
 	if( N * N + M * M > 400 )
 	    continue;
 
-	if( map[y][x] == '#' ) {
-	    display[Y][X] = '#';
-	    continue;
-	}
+	//if( map[y][x] == '#' ) {
+	//    display[Y][X] = '#';
+	//    continue;
+	//}
 
 	var chr = map[y][x];
+	job.a = chr;
 	visible(x,y);
 
 	if( !ray_processor[chr] ) 
@@ -686,7 +730,8 @@ viewWin.move(1,32);
 viewWin.frame();
 
 function onInput(charStr, charCode, isKey) {
-    win.addstr(35,0,"Input: '" + charStr + "' (" + charCode + ") - isKey: " + isKey );
+    win.addstr(33,0,"Input: '" + charStr + "' (" + charCode + ") - isKey: " + isKey );
+
     if(charStr == 'q') {
 	displayWin.close();
 	win.close();
@@ -760,12 +805,19 @@ function onInput(charStr, charCode, isKey) {
     displayWin.frame();
     viewWin.centertext(0, "  Visible  ");
     displayWin.centertext(0, "  Actual  ");
+
+    win.addstr(33,35, "Lantern Mode: " + (use_lantern ? "On " : "Off" ));
+    win.addstr(34,35, "    Aperture: " + (lantern_aperture * 180 / Math.PI).toFixed(2) + " degrees     ");
+    win.addstr(35,35, "       Angle: " + (-lantern_angle * 180 / Math.PI).toFixed(2) + " degrees     ");
+
     nc.redraw();    
 }
 
 displayWin.on('inputChar', onInput );
 viewWin.on('inputChar', onInput );
 win.on('inputChar', onInput );
+
+nc.colorPair(128, nc.colors.WHITE, nc.colors.BLUE );
 
 process.on('uncaughtException', function (err) {
     if(win)
