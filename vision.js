@@ -27,7 +27,7 @@ var vision = exports.vision = function (actor, window) {
 
     map.clearVisible();
 
-    queue.push( {i: initial_interval, x:[0,0], t:0, d: d, c:[1,1,1] } );
+    queue.push( {i: initial_interval, x:[0,0], t: actor.tform, d: d, c:[1,1,1] } );
     
     while(queue.length > 0 ) {
 	var job = queue.shift();

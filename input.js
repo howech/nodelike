@@ -15,7 +15,9 @@ var keymap = {
     'e': 'actor.lantern.increase_aperture',
     'x': 'actor.lantern.toggle',
     'a': 'actor.lantern.left',
-    's': 'actor.lantern.right'
+    's': 'actor.lantern.right',
+    '[': 'actor.turn_left',
+    ']': 'actor.turn_right'
 }
 
 var Input = exports.Input = function(actor,map, update, quit) {

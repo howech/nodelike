@@ -1,3 +1,5 @@
+var xforms = require('./xforms');
+
 var actorPrototype = {
     move_n: function()  { this.attempt_move( 0,-1); },
     move_s: function()  { this.attempt_move( 0, 1); },
@@ -7,8 +9,15 @@ var actorPrototype = {
     move_ne: function() { this.attempt_move( 1,-1); },
     move_sw: function() { this.attempt_move(-1, 1); },
     move_se: function() { this.attempt_move( 1, 1); },
+    turn_left: function()  { this.transform(4); },
+    turn_right: function() { this.transform(5); },
+    transform: function(t) {
+	this.tform = xforms.xtable[this.tform][t];
+    },
     attempt_move: function(dx,dy) {
-	var new_pos = [ this.position[0] +dx, this.position[1] +dy ];
+	var new_pos = xforms.transform( [dx,dy], this.tform, this.position );
+
+	//var new_pos = [ this.position[0] +dx, this.position[1] +dy ];
 	
 	// Get the current and exiting cells.
 	var current_cell = this.map.getCell( this.position[0], this.position[1] );
@@ -63,6 +72,7 @@ var Actor = exports.Actor = function(map) {
     this.position = [-1,-1];
     this.map = map;
     this.lantern = new Lantern();
+    this.tform = 0;
 };
 exports.Actor.prototype = actorPrototype;
 
