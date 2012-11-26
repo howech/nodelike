@@ -45,15 +45,15 @@ var vision = exports.vision = function (actor, window) {
 	var y = mapcoords[1];
 	job.m = [x,y];
 
-	var X = N + n;
-	var Y = M + m;
-	job.v = [X,Y];
+	//var X = N + n;
+	//var Y = M + m;
+	//job.v = [X,Y];
 
 	// Check for out of bounds
 	if(x<0 || x>=30 || y<0 || y>=30) 
 	    continue;
 
-	if( X < 0 || X >= 30 || Y < 0 || Y >= 30 )
+	if( N < -15 || N >= 15 || M < -15 || M >= 15 )
 	    continue;
 
 	// check vision radius
@@ -70,7 +70,7 @@ var vision = exports.vision = function (actor, window) {
 	}
 
 	if( processedRays.display ) {
-	    window.addstr(Y+1,X+1,processedRays.display,1);
+	    window.addstr(M+1+15,N+1+15,processedRays.display,1);
 	}
 
 	processedRays.ivs.forEach( function( iv_plus ) {
