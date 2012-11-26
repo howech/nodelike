@@ -22,15 +22,18 @@ var quit = function() {
     viewWin.close();
     displayWin.close();
     win.close();
-    nc.cleanup();
+
+    process.exit(0);
 }
 
 process.on('uncaughtException', function (err) {
 //    quit();
 
-    nc.cleanup();    
+    nc.leave();
+    nc.cleanup();
     console.log('Caught exception: ')
     throw err;
+    
 });
 
 // Build the main map.
