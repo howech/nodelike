@@ -18,16 +18,15 @@ viewWin.label("  Visible  ");
 
 
 var quit = function() {
-    if(viewWin)
-	viewWin.close();
-    if(displayWin)
-	displayWin.close();
-    if(win)
-	win.close();
+    nc.leave();
+    viewWin.close();
+    displayWin.close();
+    win.close();
+    nc.cleanup();
 }
 
 process.on('uncaughtException', function (err) {
-    quit();
+//    quit();
 
     nc.cleanup();    
     console.log('Caught exception: ')
