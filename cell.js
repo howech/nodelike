@@ -235,8 +235,7 @@ exports.MirrorCell.prototype = _.extend(
 	},
 	processRays: function(job) {
 	    job.cell = this;
-	    var sym = this.getSymbol( job.t );
-	    var mirror = mirror_transforms[ sym ][ job.t ];
+	    var mirror = this.getSymbol( job.t );
 	    return this.mirror_actions[ mirror ](job);
 	},
 	tryEnter: function( actor ) {
