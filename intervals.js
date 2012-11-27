@@ -178,3 +178,10 @@ exports.difference = function difference( iva, ivb ) {
     return exports.intersection( iva, exports.invert(ivb) );
 }
 
+exports.measure = function(iv) {
+    var sum = 0;
+    for(var i=0; i<iv.length; i+=2) {
+	sum += iv[i+1]-iv[i];
+    }
+    return sum;
+}

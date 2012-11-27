@@ -4,6 +4,7 @@ var xforms = require('./xforms');
 var raycast = require('./raycast');
 var nc = require('ncurses');
 var _ = require('underscore');
+var colors = require('./colors');
 
 var vision = exports.vision = function (actor, window) {
     window.erase();
@@ -24,10 +25,12 @@ var vision = exports.vision = function (actor, window) {
     var n = d[0];
     var m = d[0];
     var map = actor.map;
+    
+    var colorAggregates = {};
 
     map.clearVisible();
 
-    queue.push( {i: initial_interval, x:[0,0], t: actor.tform, d: d, c:[1,1,1] } );
+    queue.push( {i: initial_interval, x:[0,0], t: actor.tform, d: d, c:1  } );
     
     while(queue.length > 0 ) {
 	var job = queue.shift();
@@ -70,7 +73,19 @@ var vision = exports.vision = function (actor, window) {
 	}
 
 	if( processedRays.display ) {
-	    window.addstr(M+1+15,N+1+15,processedRays.display,1);
+	    var row = M+15+1;
+	    var col = N+15+1;
+
+	    var color = processedRays.color || [.8,.8,.8];
+	    var key = row + " " + col;
+
+	    colorAggregates[key] = colors.collectColorValues( color, colorAggregates[key] );
+	    colorAggregates[key].row = row;
+	    colorAggregates[key].col = col;
+	    colorAggregates[key].display = processedRays.display;
+
+	    //colorIndex = Math.floor( Math.random() * 256 );
+	    
 	}
 
 	processedRays.ivs.forEach( function( iv_plus ) {
@@ -87,4 +102,11 @@ var vision = exports.vision = function (actor, window) {
 	    });
 	});
     }
+
+    _.each(colorAggregates, function( ag ) {
+	var colorIndex = colors.averageColorIndex( ag );
+	window.addstr(ag.row,ag.col,ag.display,1);
+	window.chgat(ag.row,ag.col, 1, nc.attrs.NORMAL, colorIndex );
+
+    });
 }

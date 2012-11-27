@@ -3,6 +3,9 @@ var raycast = require('./raycast');
 
 var _ = require('underscore');
 var xforms = require('./xforms');
+var colors = require('./colors');
+
+var defaultColor = [.8,.8,.8];
 
 var cellPrototype = {
     tryExit: function( actor ) {
@@ -24,14 +27,30 @@ var cellPrototype = {
     getSymbol: function(tform) {
 	return this.symbol;
     },
+    getColor: function(mask) {
+	var c = this.color || defaultColor;
+	if( mask ) {
+	    c = colors.colorMask(c, mask );
+	}
+	return c;
+    },
     getMapSymbol: function(tform) {
 	return this.getContentsSymbol(tform) ||
 	    this.getSymbol(tform);
     },
+    processColors: function( rayJob ) {
+	if( this.tint )
+	    rayJob.c = colors.colorMask( this.tint, rayJob.c );
+    },
     processRays: function( rayJob ) {
-	return { ivs: [ {i: rayJob.i} ],
-		 display: this.getMapSymbol()
+	this.processColors( rayJob );
+	return { ivs: this.processRaysIvs(rayJob), 
+		 display: this.getMapSymbol(),
+		 color: this.getColor( rayJob.c ) 
 	       };
+    },
+    processRaysIvs: function( rayJob ) {
+	return [ { i: rayJob.i } ];
     },
     clearVisible: function() { this.visible = false; },
     setVisible: function()   { this.visible = true;  },
@@ -70,8 +89,8 @@ var WallCell = exports.WallCell = function(sym) {
 exports.WallCell.prototype = _.extend(
     new EmptyCell(),
     { 
-	processRays: function(rayJob) {
-	    return { ivs: [], display: this.getMapSymbol() };	    
+	processRaysIvs: function(rayJob) {
+	    return [];
 	},
 	tryEnter: function( actor ) {
 	    return false;
@@ -87,14 +106,12 @@ var OccludingCell = exports.OccludingCell = function(sym) {
 exports.OccludingCell.prototype = _.extend(
     new EmptyCell(),
     { 
-	processRays: function(job) {
+	processRaysIvs: function(job) {
 	    var ca = raycast.center_angle( job.x );
 	    var ext = raycast.extent( job.x );
 	    var occlusion = intervals.boundingInterval( ca + ext, ca - ext );
 	    var remaining_transmissions = intervals.difference( job.i, occlusion );
-	    return { ivs: [ { i: remaining_transmissions } ], 
-		     display: this.getMapSymbol()
-		   };
+	    return [ { i: remaining_transmissions } ];
 	},
 	tryEnter: function( actor ) {
 	    return false;
@@ -121,13 +138,13 @@ var MirrorCell = exports.MirrorCell = function(symbol) {
 
 function general_reflection(job, reflections) {
     var cell = job.cell;
-    var result = { ivs: [], display: cell.getSymbol( job.t ) }
+    var result = [];
 
     _.each( reflections, function(reflection) {
 	var iv = intervals.intersection( job.i, reflection.i );
 	var t = xforms.xtable[job.t][reflection.t];
 	var d = xforms.transform( job.x, xforms.xtable[3][t], [cell.x, cell.y] );
-	result.ivs.push( { i:iv, t: t, d: d } );
+	result.push( { i:iv, t: t, d: d } );
     });
 
     return result;
@@ -233,12 +250,17 @@ exports.MirrorCell.prototype = _.extend(
 	    '/':  process_rays_slash_mirror,
 	    '\\': process_rays_bash_mirror 
 	},
-	processRays: function(job) {
+	processRaysIvs: function(job) {
 	    job.cell = this;
 	    var mirror = this.getSymbol( job.t );
-	    return this.mirror_actions[ mirror ](job);
+	    var result = this.mirror_actions[ mirror ](job);	
+	    return result;
 	},
 	tryEnter: function( actor ) {
+	    if( this.enchanted ) {
+		var symbol = this.getSymbol( actor.tform );
+		actor.transform( { '|': 1, '-': 2, '+': 3, '/' : 7, '\\': 6 }[symbol] )
+	    }
 	    return false;
 	}
     }
@@ -264,15 +286,13 @@ var GateWayCell = exports.GateWayCell = function(symbol, tx, ty) {
 exports.GateWayCell.prototype = _.extend(
     new EmptyCell(),
     {
-	processRays: function(job) {    
+	processRaysIvs: function(job) {    
 	    if( job.x[0] == 0 && job.x[1] == 0 ) {
-		return { ivs: [ job ], display: this.getMapSymbol( job.t ) };
+		return [ job ];
 	    }
 
 	    var d = xforms.transform( job.x, xforms.xtable[3][job.t], this.target );
-            result.ivs = [ { i:job.i, t: job.t, d: d, c: job.c } ];
-	    result.display = this.getMapSymbol( job.t );
-	    return result;
+            return [ { i:job.i, t: job.t, d: d, c: job.c } ];
 	},
 	tryEnter: function(actor) {
 	    var tcell = this.map.getCell( this.target[0], this.target[1] );
