@@ -45,7 +45,7 @@ var cellPrototype = {
     processRays: function( rayJob ) {
 	this.processColors( rayJob );
 	return { ivs: this.processRaysIvs(rayJob), 
-		 display: this.getMapSymbol(),
+		 display: this.getMapSymbol(rayJob.t),
 		 color: this.getColor( rayJob.c ) 
 	       };
     },
@@ -175,7 +175,7 @@ function process_rays_horizontal_mirror(job) {
     );
 
     return general_reflection(job, [ 
-	{i: refInterval, t: 3}, 
+	{i: refInterval, t: 2}, 
 	{i: intervals.invert( refInterval ), t: 0 }
     ]);
 }
