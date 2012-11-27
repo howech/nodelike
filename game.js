@@ -66,12 +66,6 @@ main_map.setCell( 7, 8, new cell.MirrorCell('|'));
 main_map.setCell( 7, 9, new cell.MirrorCell('|'));
 main_map.setCell( 7,10, new cell.MirrorCell('|'));
 
-for(var i=6; i<=10; ++i ) {
-    main_map.getCell(12,i).tint = greenish;
-    main_map.getCell(7,i).tint =  blueish;
-}
-
-
 main_map.setCell(20, 6, new cell.MirrorCell('-'));
 main_map.setCell(17, 7, new cell.MirrorCell('|'));
 main_map.setCell(20, 7, new cell.MirrorCell('/'));
@@ -81,25 +75,52 @@ main_map.setCell(21, 6, new cell.MirrorCell('/'));
 var greenish = [ .7, 1, .7 ];
 var blueish = [.7,.7,1 ];
 
-main_map.setCell(25,25, new cell.GateWayCell('&', 10,3)  );
-main_map.setCell(10,3,  new cell.GateWayCell('%', 25,25) );
-main_map.getCell(25,25).tint = blueish;
-main_map.getCell(10,3).tint =  greenish;
+main_map.setCell(15,22, new cell.GateWayCell('&', 10,3)  );
+main_map.setCell(10,3,  new cell.GateWayCell('%', 15,22) );
+main_map.getCell(15,22).tint = blueish;
+main_map.getCell(10,3).tint =  blueish;
 
-
+ 
 for(var i = 6; i< 26; i+=2)
-    for(var j = 13; j< 26; j+=2 )
-	main_map.setCell(i,j, new cell.OccludingCell()); 
+    for(var j = 13; j< 26; j+=2 ) {
+	var cel=null;
+	if( i==6 || i == 24 || j == 13 || j == 25 ) {
+	    cel = new cell.WallCell();
+	} else if ( i < 11 || i > 18 || j < 16 || j > 20 ) {
+	    cel = new cell.OccludingCell();
+	}
+
+	if(cel) {
+	    var color = [ 0.6, i/30, j / 30 ];
+	    cel.color = color
+	    main_map.setCell(i,j, cel);
+	} 
+    }
+
+main_map.setCell(13,18, new cell.WallCell());
+main_map.setCell(14,18, new cell.MirrorCell('-'));
+main_map.setCell(15,18, new cell.MirrorCell('-'));
+main_map.setCell(16,18, new cell.MirrorCell('-'));
+main_map.setCell(17,18, new cell.WallCell());
 
 
-for(var i = 6; i<26; i += 2) {
-    main_map.setCell(i,26, new cell.WallCell());
-}
-
-main_map.setCell(15,26, new cell.MirrorCell('-'));
-_.extend( main_map.getCell(15,26), 
+var reddish = [.8,.3,.3]
+_.extend( main_map.getCell(14,18), 
 	  { enchanted: true,
-	    tint: [.7,.5,.5]
+	    tint: reddish,
+	  }
+	);
+
+
+_.extend( main_map.getCell(15,18), 
+	  { enchanted: true,
+	    tint: reddish
+	  }
+	);
+
+_.extend( main_map.getCell(16,18), 
+	  { enchanted: true,
+	    tint: reddish
 	  }
 	);
 
@@ -117,13 +138,10 @@ function drawMap( map, window) {
     window.label("  Actual  ");
 
     map.each( function(cell) {
-	var attr = cell.visible ? nc.attrs.REVERSE : nc.attrs.NORMAL;
-	
+	var attr = cell.visible ? nc.attrs.NORMAL : nc.attrs.NORMAL;
+	var colorPair = cell.visible ? 33 : 7;
 	window.addstr( cell.y+1, cell.x+1, cell.getMapSymbol(0) || "X" , 1 );
-	if( cell.visible ) {
-	    window.chgat(cell.y+1, cell.x+1, 1, nc.attrs.REVERSE  );
-	}
-
+	window.chgat(cell.y+1, cell.x+1, 1, attr, colorPair  );
 	
     });
 }
@@ -135,7 +153,7 @@ var update = function() {
     vision.vision( player, viewWin );
     drawMap( main_map, displayWin );
 
-    win.addstr(33,0,counter++ + " ");
+    win.addstr(33,0, player.tform + " ");
     win.addstr(34,0,"[" + player.position[0] + "," + player.position[1] + "]" );
     nc.redraw();
 }
