@@ -42,7 +42,7 @@ var cellPrototype = {
 	    this.getSymbol(tform);
     },
     getDescription: function(tform) {
-	return JSON.stringify( this.light );
+	return this.description || "";
     },
     processColors: function( rayJob ) {
 	var c = this.getColor( rayJob.c );
@@ -113,6 +113,7 @@ var WallCell = exports.WallCell = function(sym) {
     sym = '#' || sym;
     this.initialize(sym);
     this.blocking = true;
+    this.description = "A wall.";
 }
 
 exports.WallCell.prototype = _.extend(
@@ -130,6 +131,7 @@ exports.WallCell.prototype = _.extend(
 var OccludingCell = exports.OccludingCell = function(sym) {
     sym = 'o' || sym;
     this.initialize(sym);
+    this.description = "A column.";
 }
 
 exports.OccludingCell.prototype = _.extend(
@@ -153,6 +155,7 @@ var CandleCell = exports.CandleCell = function(sym) {
     sym = sym || "'" ;
     this.initialize(sym);
     this.staticLightSource = true;
+    this.description = "A candle.";
 };
 
 exports.CandleCell.prototype = _.extend(
@@ -187,6 +190,7 @@ var mirror_transforms = exports.mirror_transforms =
 var MirrorCell = exports.MirrorCell = function(symbol) {
     this.initialize(symbol);
     this.blocking = true;
+    this.description = "A mirror.";
 }
 
 
@@ -335,6 +339,7 @@ exports.MirrorCell.prototype = _.extend(
 var GateWayCell = exports.GateWayCell = function(symbol, tx, ty) {
     this.initialize(symbol);
     this.target = [tx,ty];
+    this.description = "A magical gateway to parts unknown.";
 }
 
 exports.GateWayCell.prototype = _.extend(

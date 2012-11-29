@@ -39,10 +39,10 @@ exports.View.prototype = {
 	this.each( function(unit) {
 	    window.addstr(unit.y+rc+1,unit.x+cc+1,unit.display,1);
 	    window.chgat(unit.y+rc+1,unit.x+cc+1, 1, nc.attrs.NORMAL, unit.colorIndex );
-	    if( this.lookWindow && unit.y == this.viewY && unit.x == this.viewX ) {
-		window.chgat(unit.y+rc+1,unit.x+cc+1, 1, nc.attrs.REVERSE, unit.colorIndex );
-	    }
 	});
+	if( this.lookWindow ) {
+	    window.chgat( this.viewY+rc+1, this.viewX+cc+1, 1, nc.attrs.REVERSE);
+	}
 	this.updateLook();
     },
     clear:  function() {
@@ -95,7 +95,7 @@ exports.View.prototype = {
     getDescription: function(x,y) {
 	var square = this.getSquare(x,y);
 	if( square ) {
-	    return square.cell.getDescription( square.tform ) +" "+ JSON.stringify( {color: square.color, colorw: square.colorw} );
+	    return square.cell.getDescription( square.tform );
 	}
 	else
 	    return "";
