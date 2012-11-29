@@ -54,6 +54,7 @@ var setup = exports.setup = function() {
 	return i;
     });
     
+    indexes = _.select( indexes, function(i) { return i < nc.maxColorPairs } );
     _.each( indexes, function(i) { nc.colorPair(i,i,0) } );
 }
 
@@ -63,7 +64,10 @@ var closestColorNoCache = function(r, g, b) {
 	var dr = r - rgb[0];
 	var dg = g - rgb[1];
 	var db = b - rgb[2];
-	return dr*dr + dg*dg + db*db;
+	
+	var rr = dr*dr + dg*dg + db*db;
+		
+	return rr;
     });
 }
 
@@ -89,27 +93,78 @@ var closestColorIndex = exports.closestColorIndex = function(r,g,b) {
     return val;
 }
 
+var addColors = exports.addColors = function( color1, color2 ) {
+    var res = [ color1[0] + color2[0],color1[1] + color2[1],color1[2] + color2[2] ];
+    return res;
+}
+
+var normalizeColor = exports.normalizeColor = function(res) {
+    var max = _.max(res) || 1;
+    if(max > 1) {
+	res[0] = (res[0]||0) / max;
+	res[1] = (res[1]||0) / max;
+	res[2] = (res[2]||0) / max;
+    }
+    return res;
+}
+
+var normalizeLight = exports.normalizeLight = function(res) {
+    var max = _.max(res);
+    if(max > 0) {
+	res[0] = (res[0]||0) / max;
+	res[1] = (res[1]||0) / max;
+	res[2] = (res[2]||0) / max;
+    }
+    return res;
+}
+
+
 var colorMask = exports.colorMask = function( color, mask ) {
     if( !mask || mask == 1)
 	return color;
     return [ color[0] * mask[0], color[1] * mask[1], color[2] * mask[2] ]
 }
 
-exports.collectColorValues = function( color, aggregate ) {
+exports.collectColorValues = function( color, colorw, aggregate ) {
     if( !aggregate )
-	aggregate = { c: [0,0,0], s: 0 };
-    aggregate.c[0] += color[0];    
-    aggregate.c[1] += color[1];
-    aggregate.c[2] += color[2];
-    aggregate.s += 1;
+	aggregate = { c: [0,0,0], s: 0.0 };
+
+    if( colorw == 0 )
+	return aggregate;
+
+    aggregate.c[0] += color[0] * colorw;    
+    aggregate.c[1] += color[1] * colorw;
+    aggregate.c[2] += color[2] * colorw;
+    aggregate.s += colorw;
+
     return aggregate;
 }
 
-exports.averageColorIndex = function( aggregate ) {
-    if(!aggregate || aggregate.s == 0 ) {
+exports.averageColorIndex = function( aggregate ) {    
+    if(!aggregate || aggregate.s == 0 || _.isNaN(aggregate.s)) {
 	return 7;
     }
 
     var c = [ aggregate.c[0] / aggregate.s, aggregate.c[1] / aggregate.s, aggregate.c[2]/ aggregate.s ];
+    
     return closestColorIndex( c );
+}
+
+var black = [0,0,0];
+exports.averageColor = function( aggregate ) {    
+    if(!aggregate || aggregate.s == 0 || _.isNaN(aggregate.s)) {
+	return black;
+    }
+    return [ aggregate.c[0] / aggregate.s, aggregate.c[1] / aggregate.s, aggregate.c[2]/ aggregate.s ];
+}
+
+exports.isCompatible = function( c1, c2 ) {
+    if( _.isArray(c1 ) ) {
+	return _.isArray(c2) && 
+	    c1[0] == c2[0] && 
+	    c1[1] == c2[1] && 
+	    c1[2] == c2[2];
+    } else {
+	return c1 == c2;
+    }
 }

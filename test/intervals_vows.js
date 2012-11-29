@@ -160,4 +160,18 @@ vows.describe("Intervals functions").addBatch( {
 	    assert.deepEqual( intervals.difference( topic.two, topic.four ), [1.5,1.8] );
 	}
     },
+    "measure": {
+	topic: { one: [],
+		 two: [1,2],
+		 three: [2,3],
+		 four: [0,1.5,1.8,3]
+	       },
+	measure: function(topic) {
+	    var m = { one: 0, two: 1, three: 1,four: 1.5+3-1.8};
+	    _.each(topic, function(iv,i) {
+		assert.equal( intervals.measure(iv), m[i] );
+	    });
+	}
+    },
+
 }).export(module);

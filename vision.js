@@ -6,107 +6,281 @@ var nc = require('ncurses');
 var _ = require('underscore');
 var colors = require('./colors');
 
-var vision = exports.vision = function (actor, window) {
-    window.erase();
-    window.frame();
-    window.label("  Visible  ");
-    window.scrollok(false);
+var View = exports.View = function(width, height) {
+    this.width = width || 30;
+    this.height = height || 30;
 
+    this.c_col = Math.floor(this.width / 2);
+    this.c_row = Math.floor(this.height / 2);
+
+    this.screen = [];
+    for(var j = 0; j<this.height; ++j) {
+	this.screen[j] = [];
+    }
+}
+exports.View.prototype = {
+    each: function(func, context) {
+	context = context || this;
+	for(var j=0; j<this.height; ++j) {
+	    for(var i=0; i< this.width; ++i) {
+		if( this.screen[j][i] )
+		    func.call( context, this.screen[j][i] );
+	    }
+	}
+    },
+    draw: function(window) {
+	window.erase();
+	window.frame();
+	window.label("  Visible  ");
+	window.scrollok(false);
+	var rc = this.c_row;
+	var cc = this.c_col;
+
+	this.each( function(unit) {
+	    window.addstr(unit.y+rc+1,unit.x+cc+1,unit.display,1);
+	    window.chgat(unit.y+rc+1,unit.x+cc+1, 1, nc.attrs.NORMAL, unit.colorIndex );
+	    if( this.lookWindow && unit.y == this.viewY && unit.x == this.viewX ) {
+		window.chgat(unit.y+rc+1,unit.x+cc+1, 1, nc.attrs.REVERSE, unit.colorIndex );
+	    }
+	});
+	this.updateLook();
+    },
+    clear:  function() {
+	for(var j=0; j<this.height; ++j) {
+	    for(var i=0; i< this.width; ++i) {
+		if( this.screen[j][i] )
+		    this.screen[j][i] = null;
+	    }
+	}
+    },
+    set: function(x,y,display,color,cell,tform) {
+
+	if( color[0] < 0.05 && color[1] < 0.05 && color[2] < 0.05 )
+	    return;
+	if(!display)
+	    return;
+
+	colorIndex = colors.closestColorIndex(color);
+
+	var row = y+this.c_row;
+	var col = x+this.c_col;
+
+	this.screen[row][col] = { 
+	    x: x,
+	    y: y,
+	    display: display,
+	    colorIndex: colorIndex,
+	    cell: cell,
+	    tform: tform,
+	    color: color,
+	    colorw: 1
+	}
+    },
+    inView: function(x,y) {
+	var row = y+this.c_row;
+	var col = x+this.c_col;
+	
+	return row>=0 && col>=0 && col< this.width && row < this.height
+    },
+    getSquare: function(x,y) {
+	return this.screen[y+this.c_row][x+this.c_col];
+    },
+    getCell: function(x,y) {
+	var square = this.getSquare(x,y);
+	if( square )
+	    return square.cell;
+	else
+	    return null;
+    },
+    getDescription: function(x,y) {
+	var square = this.getSquare(x,y);
+	if( square ) {
+	    return square.cell.getDescription( square.tform ) +" "+ JSON.stringify( {color: square.color, colorw: square.colorw} );
+	}
+	else
+	    return "";
+    },
+    enterLookMode: function(input) {
+	this.viewX = 0;
+	this.viewY = 0;
+	this.lookWindow = new nc.Window(3,60,33,0);
+	this.lookWindow.on('inputChar', function(a,b,c) { input.onInput(a,b,c) } );
+    },
+    exitLookMode: function() {
+	if( this.lookWindow )
+	    this.lookWindow.close();
+
+	this.lookWindow = null;
+    },
+    updateLook: function() {
+	if( this.lookWindow ) {
+	    this.lookWindow.erase();
+	    this.lookWindow.addstr( 0, 0, this.getDescription( this.viewX, this.viewY ) );
+	}
+    },
+    moveView: function(dx,dy) {
+	if( this.inView( this.viewX + dx, this.viewY + dy ) ) {
+	    this.viewX += dx;
+	    this.viewY += dy;
+	}
+    },
+    move_n: function() {
+	this.moveView(0,-1);
+    },
+    move_s: function() {
+	this.moveView(0,1);
+    },
+    move_e: function() {
+	this.moveView(1,0);
+    },
+    move_w: function() {
+	this.moveView(-1,0);
+    },
+    move_ne: function() {
+	this.moveView(1,-1);
+    },
+    move_nw: function() {
+	this.moveView(-1,-1);
+    },
+    move_se: function() {
+	this.moveView(1,1);
+    },
+    move_sw: function() {
+	this.moveView(-1,1);
+    }
+}
+
+var vision = exports.vision = function (actor, view) {
     var queue = [];
 
-    var initial_interval = [-Math.PI, Math.PI ];
-    
-    if( actor.lantern.on ) {
-	var lantern_interval = intervals.boundingInterval( actor.lantern.angle + actor.lantern.aperture, actor.lantern.angle - actor.lantern.aperture );
-	initial_interval = intervals.intersection( initial_interval, lantern_interval );
-    }
-    
-    var d = [ actor.position[0], actor.position[1] ];
-    var n = d[0];
-    var m = d[0];
+    var initial_interval = [-Math.PI, Math.PI ];    
+    var d = _.clone( actor.position );
     var map = actor.map;
-    
-    var colorAggregates = {};
 
     map.clearVisible();
+    view.clear();
 
-    queue.push( {i: initial_interval, x:[0,0], t: actor.tform, d: d, c:1  } );
-    
+    var firstJob = { map:map, 
+		     i:initial_interval, 
+		     x:[0,0], 
+		     t: actor.tform, 
+		     d: d, 
+		     c: 1,
+		     fl: true
+		   };
+
+    queue.push( firstJob ); 
+ 
     while(queue.length > 0 ) {
 	var job = queue.shift();
-	var iv = job.i;
+	var X = xforms.transform(job.x, job.t, job.d );
+	var cell = job.map.getCell( X );
 
-	var N = job.x[0];
-	var M = job.x[1];
-
-	var tform = job.t;
-	var delta = job.d;
-
-	var mapcoords = xforms.transform( job.x, job.t, job.d );
-
-	var x = mapcoords[0];
-	var y = mapcoords[1];
-	job.m = [x,y];
-
-	//var X = N + n;
-	//var Y = M + m;
-	//job.v = [X,Y];
-
-	// Check for out of bounds
-	if(x<0 || x>=30 || y<0 || y>=30) 
+	if( !cell )
 	    continue;
-
-	if( N < -15 || N >= 15 || M < -15 || M >= 15 )
-	    continue;
-
-	// check vision radius
-	if( N * N + M * M > 400 )
-	    continue;
-
-	var cell = map.getCell(x,y);
-	var processedRays;
-
-	if( cell ) {
-	    cell.setVisible();
-	    cell.visible = true;
-	    processedRays = cell.processRays(job);
-	}
-
-	if( processedRays.display ) {
-	    var row = M+15+1;
-	    var col = N+15+1;
-
-	    var color = processedRays.color || [.8,.8,.8];
-	    var key = row + " " + col;
-
-	    colorAggregates[key] = colors.collectColorValues( color, colorAggregates[key] );
-	    colorAggregates[key].row = row;
-	    colorAggregates[key].col = col;
-	    colorAggregates[key].display = processedRays.display;
-
-	    //colorIndex = Math.floor( Math.random() * 256 );
 	    
+	var N = job.x[0];
+	var M = job.x[1];	    
+	
+	if(!view.inView( N,M ))
+	    continue;
+	
+	if( N * N + M * M > (actor.range || 100) )
+	    continue;
+	
+	var processedRays;
+	    
+	var visible = false;
+
+	if( cell.blocking ) {
+	    visible = job.fl;
+	} else {
+	    visible = cell.light;
 	}
 
-	processedRays.ivs.forEach( function( iv_plus ) {
+	if(visible)
+	    cell.setVisible();
+	processedRays = cell.processRays(job);
+	
+	var color  = processedRays.color; // || [.8,.8,.8];
+    	
+	view.set( N,M, processedRays.display, color, cell, processedRays.t );
+	
+	_.each( processedRays.ivs,  function( iv_plus ) {
 	    var exits = raycast.exitIntervals( N, M );
-	    exits.forEach( function(exit) {
+	    _.each( exits,  function(exit) {
 		var newIv = intervals.intersection( iv_plus.i, exit.i );
 		if(newIv.length > 0) {
-		    queue.push( _.defaults( { i: newIv } , 
-					    exit,    // get the x property
-					    iv_plus, // get any transforms, reflections, etc
-					    job      // get everything else from the original job
-					  ) );
+		    var newJob = _.defaults( 
+			{i: newIv, fl: cell.light },
+			exit,
+			iv_plus,
+			job
+		    );
+		    queue.push( newJob );
 		}
 	    });
 	});
     }
+}
 
-    _.each(colorAggregates, function( ag ) {
-	var colorIndex = colors.averageColorIndex( ag );
-	window.addstr(ag.row,ag.col,ag.display,1);
-	window.chgat(ag.row,ag.col, 1, nc.attrs.NORMAL, colorIndex );
 
-    });
+var light = exports.light = function (light_source, map) {
+    var queue = [];
+
+    var initial_interval = [-Math.PI, Math.PI ];
+    
+    if( light_source.interval ) {
+	initial_interval = intervals.intersection( initial_interval, light_source.interval );
+    }
+    
+    var d = [ light_source.position[0], light_source.position[1] ];
+    
+    var firstJob = { map: map,
+		     i: initial_interval,
+		     x: [0,0], 
+		     t: light_source.tform, 
+		     d: d, 
+		     c: light_source.color
+		   };
+
+    queue.push( firstJob );
+    
+    while(queue.length > 0 ) {
+	var job = queue.shift();
+	var X = xforms.transform(job.x, job.t, job.d );
+	var cell = job.map.getCell( X );
+
+	if(!cell)
+	    continue;
+
+	var iv = job.i;
+	
+	var N = job.x[0];
+	var M = job.x[1];
+	
+	// check vision radius
+	if( (N * N + M * M) > light_source.range )
+	    continue;
+	
+	var processedRays;
+	    
+	processedRays = cell.processLightRays(job);
+	    
+	_.each( processedRays.ivs, function( iv_plus ) {
+	    var exits = raycast.exitIntervals( N, M );
+	    _.each( exits, function(exit) {
+		var newIv = intervals.intersection( iv_plus.i, exit.i );
+		if(newIv.length > 0) {
+		    var newJob = _.defaults(
+			{ i:newIv},
+			exit,
+			iv_plus,
+			job
+		    );
+		    queue.push( newJob );
+		}
+	    });
+	});
+    }
 }

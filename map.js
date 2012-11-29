@@ -1,7 +1,13 @@
 var cell = require('./cell');
-
+var _ = require('underscore');
+var vision = require('./vision');
 var mapPrototype = {
     getCell: function(x,y) {
+	if( _.isArray(x) ) {
+	    y = x[1];
+	    x = x[0];
+	}
+
 	// return null if the cell does not exits
 	if( x<0 || x>= this.width ||
 	    y<0 || y>= this.height )
@@ -36,8 +42,33 @@ var mapPrototype = {
 
     clearVisible: function() {
 	this.each( function(cell) { cell.clearVisible() } );
-    }
+    },
 
+    clearLight: function() {
+	this.each( function(cell) { cell.clearLight(this.static_light) } );
+	if( ! this.static_light ) {
+	    this.each( function(cell) {
+		if( cell.staticLightSource ) {
+		    vision.light( cell.getStaticLightSource(), this );
+		}
+	    });
+	    
+	    this.each( function(cell) {
+		cell.static_light = _.clone( cell.light );
+	    });
+	    this.static_light = true;
+	};    
+	   
+    },
+    getLightSources: function() {
+	var results = [];
+	this.each( function(cell) { 
+	    if(cell.lightSource) {
+		results.push( cell.getLightSource() );
+	    }
+	});
+	return results;
+    }		 		
 };
 
 exports.Map = function(width, height) {

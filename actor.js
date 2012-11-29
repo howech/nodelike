@@ -1,5 +1,5 @@
 var xforms = require('./xforms');
-
+var intervals = require('./intervals');
 var actorPrototype = {
     move_n: function()  { this.attempt_move( 0,-1); },
     move_s: function()  { this.attempt_move( 0, 1); },
@@ -15,6 +15,19 @@ var actorPrototype = {
 	this.tform = xforms.xtable[this.tform][t];
     },
     attempt_move: function(dx,dy) {
+
+	// check for moving diagonally through through blocking elements
+	if(dx != 0 && dy != 0 ) {
+	    var a = xforms.transform( [dx,0], this.tform, this.position );
+	    var ta = this.map.getCell( a[0], a[1] );
+	    if( ta.blocking ) {
+		var b = xforms.transform( [0,dy], this.tform, this.position );
+		var tb = this.map.getCell( b[0], b[1] );
+		if(tb.blocking)
+		    return;
+	    }
+	}
+
 	var new_pos = xforms.transform( [dx,dy], this.tform, this.position );
 
 	//var new_pos = [ this.position[0] +dx, this.position[1] +dy ];
@@ -42,6 +55,7 @@ var Lantern = exports.Lantern = function() {
     this.on = false;
     this.angle = 0;
     this.aperture = 1;
+    this.interval = [-1,1];
 }
 
 exports.Lantern.prototype = {
@@ -50,21 +64,28 @@ exports.Lantern.prototype = {
 	this.angle += this.aperture / 2.0;
 	if(this.angle > Math.PI)
 	    this.angle -= 2*Math.PI
+	this.updateInterval();
     },
     left: function() {
 	this.angle -= this.aperture / 2.0;
 	if(this.angle < -Math.PI)
 	    this.angle += 2*Math.PI
+	this.updateInterval();
     },
     increase_aperture: function() {
 	this.aperture = this.aperture * 2.0;
 	if(this.aperture > 1)
 	    this.aperture = 1;
+	this.updateInterval();
     },
     decrease_aperture: function() {
 	this.aperture = this.aperture / 2.0;
 	if(this.aperture < 0.001)
 	    this.aperture = 0.001;
+	this.updateInterval();
+    },
+    updateInterval: function() {
+	this.interval = intervals.boundingInterval( this.angle - this.aperture, this.angle + this.aperture );
     }
 }
 

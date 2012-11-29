@@ -51,7 +51,6 @@ main_map.setCell(11, 5, new cell.MirrorCell('-'));
 main_map.setCell(12, 5, new cell.MirrorCell('+'));
 main_map.setCell(13, 5, new cell.MirrorCell('-'));
 
-
 main_map.setCell(8,9, new cell.OccludingCell() );
 
 main_map.setCell(12, 6, new cell.MirrorCell('|'));
@@ -85,7 +84,7 @@ for(var i = 6; i< 26; i+=2)
     for(var j = 13; j< 26; j+=2 ) {
 	var cel=null;
 	if( i==6 || i == 24 || j == 13 || j == 25 ) {
-	    cel = new cell.WallCell();
+	    cel = new cell.CandleCell();
 	} else if ( i < 11 || i > 18 || j < 16 || j > 20 ) {
 	    cel = new cell.OccludingCell();
 	}
@@ -139,7 +138,7 @@ function drawMap( map, window) {
 
     map.each( function(cell) {
 	var attr = cell.visible ? nc.attrs.NORMAL : nc.attrs.NORMAL;
-	var colorPair = cell.visible ? 33 : 7;
+	var colorPair = cell.visible ? 4 : 7;
 	window.addstr( cell.y+1, cell.x+1, cell.getMapSymbol(0) || "X" , 1 );
 	window.chgat(cell.y+1, cell.x+1, 1, attr, colorPair  );
 	
@@ -147,10 +146,36 @@ function drawMap( map, window) {
 }
 
 var counter = 0;
+var view = new vision.View(30,30);
+
 var update = function() {
     main_map.clearVisible();
+    main_map.clearLight();
 
-    vision.vision( player, viewWin );
+    if( player.lantern.on ) {
+	vision.light( { interval: player.lantern.interval,
+			tform: player.tform,
+			position: player.position,
+			color: [ 1, 1, 1],
+			range: 64
+		      },
+		      main_map );
+    }
+    
+    vision.light( { interval: [-Math.PI, Math.PI ],
+		    tform: player.tform,
+		    position: player.position,
+		    color: [1,1,1],
+		    range: 2
+		  },
+		  main_map );
+
+    _.each( main_map.getLightSources(), function( source ) {
+	vision.light( source, main_map );
+    });
+        
+    vision.vision( player, view );
+    view.draw( viewWin );
     drawMap( main_map, displayWin );
 
     win.addstr(33,0, player.tform + " ");
@@ -158,7 +183,7 @@ var update = function() {
     nc.redraw();
 }
 
-var inputObj = new input.Input(player, main_map, update, quit);
+var inputObj = new input.Input(player, main_map, view, update, quit);
 
 
 function doInput(a,b,c) { inputObj.onInput(a,b,c) };

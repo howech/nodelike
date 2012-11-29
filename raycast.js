@@ -166,7 +166,7 @@ function exitIntervals_nomemo(n,m) {
     // we can exit to the left if we are not to the right of the origin
     if( n < 1 ) {
 	exits.push( {i: intervals.boundingInterval(b,c), x: [n-1,m]} );
-    }
+    } 
 
     // we can exit to the right if we are not left of the origin
     if( n > -1 ) {
@@ -194,4 +194,54 @@ var exitIntervals = exports.exitIntervals = function(n,m) {
 	xIv_memo[key] = exitIntervals_nomemo(n,m);
     }
     return xIv_memo[key];
+}
+
+
+function entranceIntervals_nomemo(n,m) {
+    var entrances = [];
+    var a = vertex_angle(n,m),
+    b = vertex_angle(n-1,m),
+    c = vertex_angle(n-1,m-1),
+    d = vertex_angle(n,m-1);
+    
+    var center = n==0 && m==0;
+    // we can exit to the left if we are not to the right of the origin
+    if( n < 0 || center) {
+	entrances[0] = {i: intervals.boundingInterval(a,d) };
+    } else {
+	entrances[0] = {i: [] }
+    }
+
+    // we can exit to the right if we are not left of the origin
+    if( n > 0 || center) {
+	entrances[2] = { i: intervals.boundingInterval(b,c)  };
+    } else {
+	entrances[2] = {i: [] }
+    }
+
+    // we can exit down if we are not above the origin
+    if( m < 0 || center) {
+	entrances[1] = {i: intervals.boundingInterval(a,b) };
+    } else {
+	entrances[1] = {i: [] }
+    }
+
+    // we can exit up if we are not below the origin
+    if(  m > 0 || center) {
+	entrances[3] = { i: intervals.boundingInterval(c,d) };
+    } else {
+	entrances[3] = {i: [] }
+    }
+
+    return entrances;
+}
+
+var nIv_memo = {}
+var entranceIntervals = exports.entranceIntervals = function(n,m) {
+    var key = memo_key(n,m);
+
+    if( !nIv_memo[key] ) {
+	nIv_memo[key] = entranceIntervals_nomemo(n,m);
+    }
+    return nIv_memo[key];
 }

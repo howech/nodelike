@@ -6,6 +6,9 @@ var xforms = require('./xforms');
 var colors = require('./colors');
 
 var defaultColor = [.8,.8,.8];
+var ambientLight = 1;
+
+var nc = require('ncurses');
 
 var cellPrototype = {
     tryExit: function( actor ) {
@@ -38,15 +41,40 @@ var cellPrototype = {
 	return this.getContentsSymbol(tform) ||
 	    this.getSymbol(tform);
     },
+    getDescription: function(tform) {
+	return JSON.stringify( this.light );
+    },
     processColors: function( rayJob ) {
+	var c = this.getColor( rayJob.c );
+
 	if( this.tint )
 	    rayJob.c = colors.colorMask( this.tint, rayJob.c );
+
+ 	return c;
+    },
+    clearLight: function(static_light) {
+	if( !static_light ) {
+	    this.light = false;
+	} else {
+	    this.light = this.static_light;
+	}
+    },
+    processLightRays: function( rayJob ) {
+	this.light = true;
+	return { ivs: this.processRaysIvs( rayJob ) };
     },
     processRays: function( rayJob ) {
-	this.processColors( rayJob );
+	var color = this.processColors( rayJob );
+	var display = this.getMapSymbol(rayJob.t);
+	if( this.blocking ) {
+	    display = rayJob.fl ? display : null;
+	} else {
+	    display = this.light ? display : null;
+	}
 	return { ivs: this.processRaysIvs(rayJob), 
-		 display: this.getMapSymbol(rayJob.t),
-		 color: this.getColor( rayJob.c ) 
+		 display: display,
+		 color: color,
+		 t: rayJob.t
 	       };
     },
     processRaysIvs: function( rayJob ) {
@@ -84,6 +112,7 @@ exports.EmptyCell.prototype = cellPrototype;
 var WallCell = exports.WallCell = function(sym) {
     sym = '#' || sym;
     this.initialize(sym);
+    this.blocking = true;
 }
 
 exports.WallCell.prototype = _.extend(
@@ -120,6 +149,30 @@ exports.OccludingCell.prototype = _.extend(
 );
 
 
+var CandleCell = exports.CandleCell = function(sym) {
+    sym = sym || "'" ;
+    this.initialize(sym);
+    this.staticLightSource = true;
+};
+
+exports.CandleCell.prototype = _.extend(
+    new EmptyCell(),
+    {
+	getStaticLightSource: function() {
+	    if( ! this.lightSourceObject )
+		this.lightSourceObject = {
+		    interval: [-Math.PI, Math.PI ],
+		    position: [ this.x, this.y ],
+		    tform: 0,
+		    color: [0.8,0.8,0.5],
+		    range: 10
+		};
+	    return this.lightSourceObject;
+	}
+    });
+
+
+
 // This table shows how mirrors transform under the group of eight. We
 // need this because light will interact with the transformed mirror
 // instead of the actual mirror as seen on the map.
@@ -133,6 +186,7 @@ var mirror_transforms = exports.mirror_transforms =
 
 var MirrorCell = exports.MirrorCell = function(symbol) {
     this.initialize(symbol);
+    this.blocking = true;
 }
 
 
@@ -288,11 +342,11 @@ exports.GateWayCell.prototype = _.extend(
     {
 	processRaysIvs: function(job) {    
 	    if( job.x[0] == 0 && job.x[1] == 0 ) {
-		return [ job ];
+		return [ { i: job.i, t: job.t, d: job.d } ];
 	    }
 
 	    var d = xforms.transform( job.x, xforms.xtable[3][job.t], this.target );
-            return [ { i:job.i, t: job.t, d: d, c: job.c } ];
+            return [ { i:job.i, t: job.t, d: d } ];
 	},
 	tryEnter: function(actor) {
 	    var tcell = this.map.getCell( this.target[0], this.target[1] );
