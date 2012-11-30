@@ -8,7 +8,7 @@ var colors = require('./colors');
 var defaultColor = [.8,.8,.8];
 var ambientLight = 1;
 
-var nc = require('ncurses');
+var nc;// = require('ncurses');
 
 var cellPrototype = {
     tryExit: function( actor ) {

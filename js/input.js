@@ -1,4 +1,4 @@
-var nc = require('ncurses');
+var nc;// = require('ncurses');
 var _ = require('underscore');
 
 var playMode_keymap = {
@@ -35,7 +35,8 @@ var lookMode_keymap = {
 
 var keymap = playMode_keymap;
 
-var Input = exports.Input = function(actor,map, view, update, quit) {
+var Input = exports.Input = function(term,actor,map, view, update, quit) {
+    this.term = term;
     this.actor = actor;
     this.map = map;
     this.update = update;
@@ -45,7 +46,8 @@ var Input = exports.Input = function(actor,map, view, update, quit) {
 }
 
 exports.Input.prototype = {
-    onInput: function(charStr, charCode, isKey) {
+    onInput: function() {
+	var charStr = String.fromCharCode(this.term.inputChar);
 	//this.win.addstr(33,0,"Input: '" + charStr + "' (" + charCode + ") - isKey: " + isKey );
 
 	var action = this.keymap[charStr];

@@ -1,8 +1,6 @@
-
 var intervals = require('./intervals');
 var xforms = require('./xforms');
 var raycast = require('./raycast');
-var nc = require('ncurses');
 var _ = require('underscore');
 var colors = require('./colors');
 
@@ -30,18 +28,13 @@ exports.View.prototype = {
     },
     draw: function(window) {
 	window.erase();
-	window.frame();
-	window.label("  Visible  ");
-	window.scrollok(false);
 	var rc = this.c_row;
 	var cc = this.c_col;
-
 	this.each( function(unit) {
-	    window.addstr(unit.y+rc+1,unit.x+cc+1,unit.display,1);
-	    window.chgat(unit.y+rc+1,unit.x+cc+1, 1, nc.attrs.NORMAL, unit.colorIndex );
+	    window.set(unit.y+rc+1,unit.x+cc+1,unit.display,unit.colorIndex );
 	});
 	if( this.lookWindow ) {
-	    window.chgat( this.viewY+rc+1, this.viewX+cc+1, 1, nc.attrs.REVERSE);
+	    window.setStyle( this.viewY+rc+1,this.viewX_cc+1, 1);
 	}
 	this.updateLook();
     },
@@ -103,8 +96,8 @@ exports.View.prototype = {
     enterLookMode: function(input) {
 	this.viewX = 0;
 	this.viewY = 0;
-	this.lookWindow = new nc.Window(3,60,33,0);
-	this.lookWindow.on('inputChar', function(a,b,c) { input.onInput(a,b,c) } );
+	//this.lookWindow = new nc.Window(3,60,33,0);
+	//this.lookWindow.on('inputChar', function(a,b,c) { input.onInput(a,b,c) } );
     },
     exitLookMode: function() {
 	if( this.lookWindow )
