@@ -103,6 +103,7 @@ exports.View.prototype = {
 	this.lookMode = true;
     },
     exitLookMode: function() {
+	this.textWin.erase();
 	this.lookMode = false;
     },
     updateLook: function() {

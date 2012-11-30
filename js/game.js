@@ -165,6 +165,9 @@ var start = exports.start = function(t) {
     main_map.setCell(15,18, new cell.MirrorCell('-'));
     main_map.setCell(16,18, new cell.MirrorCell('-'));
     main_map.setCell(17,18, new cell.WallCell());
+    main_map.setCell(13,19, new cell.CandleCell());
+    main_map.setCell(17,19, new cell.CandleCell());
+
     
 
     var reddish = [.8,.3,.3]
