@@ -3,10 +3,13 @@ var xforms = require('./xforms');
 var raycast = require('./raycast');
 var _ = require('underscore');
 var colors = require('./colors');
+var win = require('./window.js');
 
-var View = exports.View = function(width, height) {
+var View = exports.View = function(width, height, viewWin, textWin) {
     this.width = width || 30;
     this.height = height || 30;
+    this.viewWin = viewWin;
+    this.textWin = textWin;
 
     this.c_col = Math.floor(this.width / 2);
     this.c_row = Math.floor(this.height / 2);
@@ -16,6 +19,7 @@ var View = exports.View = function(width, height) {
 	this.screen[j] = [];
     }
 }
+
 exports.View.prototype = {
     each: function(func, context) {
 	context = context || this;
@@ -26,15 +30,15 @@ exports.View.prototype = {
 	    }
 	}
     },
-    draw: function(window) {
-	window.erase();
+    draw: function() {
+	this.viewWin.erase();
 	var rc = this.c_row;
 	var cc = this.c_col;
 	this.each( function(unit) {
-	    window.set(unit.y+rc+1,unit.x+cc+1,unit.display,unit.colorIndex );
+	    this.viewWin.set(unit.y+rc+1,unit.x+cc+1,unit.display,unit.colorIndex );
 	});
-	if( this.lookWindow ) {
-	    window.setStyle( this.viewY+rc+1,this.viewX_cc+1, 1);
+	if( this.lookMode ) {
+	    this.viewWin.setStyle( this.viewY+rc+1,this.viewX+cc+1, 1);
 	}
 	this.updateLook();
     },
@@ -96,19 +100,15 @@ exports.View.prototype = {
     enterLookMode: function(input) {
 	this.viewX = 0;
 	this.viewY = 0;
-	//this.lookWindow = new nc.Window(3,60,33,0);
-	//this.lookWindow.on('inputChar', function(a,b,c) { input.onInput(a,b,c) } );
+	this.lookMode = true;
     },
     exitLookMode: function() {
-	if( this.lookWindow )
-	    this.lookWindow.close();
-
-	this.lookWindow = null;
+	this.lookMode = false;
     },
     updateLook: function() {
-	if( this.lookWindow ) {
-	    this.lookWindow.erase();
-	    this.lookWindow.addstr( 0, 0, this.getDescription( this.viewX, this.viewY ) );
+	if( this.lookMode ) {
+	    this.textWin.erase();
+	    this.textWin.typeAt( 1, 1, this.getDescription( this.viewX, this.viewY ) );
 	}
     },
     moveView: function(dx,dy) {

@@ -41,7 +41,7 @@ var Input = exports.Input = function(term,actor,map, view, update, quit) {
     this.map = map;
     this.update = update;
     this.quit = quit;
-    this.keymap = keymap;
+    this.keymap = playMode_keymap;
     this.view = view;
 }
 
@@ -63,7 +63,7 @@ exports.Input.prototype = {
 	    var name = args.shift();
 	    
 	    if( _.isFunction( obj[ name ] )) {
-		obj = obj[name]();
+		obj = obj[name].call( obj );
 	    } else if(_.isObject( obj[name] )) {
 		obj = obj[name];
 	    } else { 

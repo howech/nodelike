@@ -14,14 +14,20 @@ var inputObj;
 var player;
 var viewWin;
 var displayWin;
+var textWin;
 var term;
+
+var mapColors = {};
 
 function drawMap( map, window) {
     window.erase();
     //window.label("  Actual  ");
+    
+    mapColors.white = mapColors.white || window.getStyleFromColor("white");
+    mapColors.blue = mapColors.blue || window.getStyleFromColor("blue");
 
     map.each( function(cell) {
-	var colorPair = cell.visible ? 4 * 256 : 7 * 256;
+	var colorPair = cell.visible ? mapColors.blue : mapColors.white;
 	window.set(cell.y+1, cell.x+1, cell.getMapSymbol(0), colorPair );	
     });
 }
@@ -62,13 +68,12 @@ var update = exports.update = function() {
     });
         
     vision.vision( player, view );
-    view.draw( viewWin );
+    view.draw();
     drawMap( main_map, displayWin );
 
-    viewWin.refresh();
+    textWin.refresh();
     displayWin.refresh();
-
-    inputObj = new input.Input(term, player, main_map, view, update, quit);
+    viewWin.refresh();
 }
 
 var inputHandler = exports.inputHandler = function() {
@@ -88,10 +93,14 @@ var start = exports.start = function(t) {
     
     viewWin = new win.Window(32,32, term);
     viewWin.row=0;
-    viewWin.col=32;
+    viewWin.col=31;
     viewWin.border = true;
     viewWin.label = "  Visible  ";
 
+    textWin = new win.Window(5,63,term);
+    textWin.row=31;
+    textWin.col=0;
+    textWin.border=true;
 
     // Build the main map.
     main_map = new map.Map(30,30);
@@ -139,13 +148,14 @@ var start = exports.start = function(t) {
 	    var cel=null;
 	    if( i==6 || i == 24 || j == 13 || j == 25 ) {
 		cel = new cell.CandleCell();
+		cel.color = [.8,.8,.4];
 	    } else if ( i < 11 || i > 18 || j < 16 || j > 20 ) {
 		cel = new cell.OccludingCell();
+		var color = [ 0.6, i/30, j / 30 ];
+		cel.color = color
 	    }
 	    
 	    if(cel) {
-		var color = [ 0.6, i/30, j / 30 ];
-		cel.color = color
 		main_map.setCell(i,j, cel);
 	    } 
 	}
@@ -182,7 +192,9 @@ var start = exports.start = function(t) {
     main_map.getCell(29,29).enter(player);
     player.position = [29,29];    
 
-    view = new vision.View(30,30);
+    view = new vision.View(30,30,viewWin,textWin);
+    inputObj = new input.Input(term, player, main_map, view, update, quit);
+
     update();
 }
 
