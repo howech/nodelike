@@ -15,6 +15,7 @@ var player;
 var viewWin;
 var displayWin;
 var textWin;
+var inputWin;
 var term;
 
 var mapColors = {};
@@ -28,7 +29,7 @@ function drawMap( map, window) {
 
     map.each( function(cell) {
 	var colorPair = cell.visible ? mapColors.blue : mapColors.white;
-	window.set(cell.y+1, cell.x+1, cell.getMapSymbol(0), colorPair );	
+	window.set(cell.y+1, cell.x+1, cell.getMapSymbol(0).display, colorPair );	
     });
 }
 
@@ -77,7 +78,6 @@ var update = exports.update = function() {
 }
 
 var inputHandler = exports.inputHandler = function() {
-    console.log( "event");
     inputObj.onInput();
 }
 
@@ -97,10 +97,15 @@ var start = exports.start = function(t) {
     viewWin.border = true;
     viewWin.label = "  Visible  ";
 
-    textWin = new win.Window(5,63,term);
+    textWin = new win.Window(5,94,term);
     textWin.row=31;
     textWin.col=0;
     textWin.border=true;
+
+    inputWin = new win.Window(32,32,term);
+    inputWin.row=0;
+    inputWin.col=62;
+    inputWin.border = true;
 
     // Build the main map.
     main_map = new map.Map(30,30);
@@ -140,7 +145,11 @@ var start = exports.start = function(t) {
     main_map.setCell(15,22, new cell.GateWayCell('&', 10,3)  );
     main_map.setCell(10,3,  new cell.GateWayCell('%', 15,22) );
     main_map.getCell(15,22).tint = blueish;
+    main_map.getCell(15,22).color = [.8,.6,1];
     main_map.getCell(10,3).tint =  blueish;
+    main_map.getCell(10,3).color =  [.8,.6,1];
+    main_map.getCell(10,3).enter_tform = 5;
+    main_map.getCell(10,3).exit_tform =  4;
     
  
     for(var i = 6; i< 26; i+=2)
@@ -168,8 +177,6 @@ var start = exports.start = function(t) {
     main_map.setCell(13,19, new cell.CandleCell());
     main_map.setCell(17,19, new cell.CandleCell());
 
-    
-
     var reddish = [.8,.3,.3]
     _.extend( main_map.getCell(14,18), 
 	      { enchanted: true,
@@ -196,7 +203,7 @@ var start = exports.start = function(t) {
     player.position = [29,29];    
 
     view = new vision.View(30,30,viewWin,textWin);
-    inputObj = new input.Input(term, player, main_map, view, update, quit);
+    inputObj = new input.Input(term, player, main_map, view, update, quit, inputWin);
 
     update();
 }

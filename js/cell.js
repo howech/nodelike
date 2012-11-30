@@ -15,6 +15,12 @@ var cellPrototype = {
 	return true;
     },
     tryEnter: function( actor ) {
+	var blocker = _.find( this.enterActions, function(item) {
+	    return !item.tryEnter(actor);
+	});
+	if( blocker )
+	    return false;
+	
 	return true;
     },
     exit: function( actor ) {
@@ -22,35 +28,40 @@ var cellPrototype = {
 	return true;
     },
     enter: function( actor ) {
+	var blocker = _.find( this.enterActions, function(item) {
+	    return item.enter(actor);
+	});
+	if( blocker )
+	    return true;
+	
 	this.addContents(actor);
 	actor.setPosition( this.x, this.y );
 	return true;
     },
     symbol: '.',
+    isBlocking: function() {
+	return this.blocking;
+    },
+    isOccluding: function() {
+	return this.occluding;
+    },
     getSymbol: function(tform) {
-	return this.symbol;
+	return { display: this.symbol,
+		 color: this.color || [.8,.8,.8] };
     },
-    getColor: function(mask) {
-	var c = this.color || defaultColor;
-	if( mask ) {
-	    c = colors.colorMask(c, mask );
-	}
-	return c;
-    },
+    //getColor: function(mask) {
+//	var c = this.color || defaultColor;
+//	if( mask ) {
+//	    c = colors.colorMask(c, mask );
+//	}
+//	return c;
+//    },
     getMapSymbol: function(tform) {
 	return this.getContentsSymbol(tform) ||
 	    this.getSymbol(tform);
     },
     getDescription: function(tform) {
 	return this.description || "";
-    },
-    processColors: function( rayJob ) {
-	var c = this.getColor( rayJob.c );
-
-	if( this.tint )
-	    rayJob.c = colors.colorMask( this.tint, rayJob.c );
-
- 	return c;
     },
     clearLight: function(static_light) {
 	if( !static_light ) {
@@ -61,21 +72,36 @@ var cellPrototype = {
     },
     processLightRays: function( rayJob ) {
 	this.light = true;
-	return { ivs: this.processRaysIvs( rayJob ) };
+	var ivs = [];
+
+	_.each( this.rayProcessors, function( item ) {
+	    ivs = ivs.concat( item.processRaysIvs(rayJob) );
+	});
+	ivs = ivs.concat( this.processRaysIvs(rayJob)); 
+
+	return { ivs: ivs } ;
     },
     processRays: function( rayJob ) {
-	var color = this.processColors( rayJob );
-	var display = this.getMapSymbol(rayJob.t);
+	var ivs = [];
+
+	var display_color = this.getMapSymbol(rayJob.t);
+
+	display_color.color = colors.colorMask( display_color.color, rayJob.c );
+
+	_.each( this.rayProcessors, function( item ) {
+	    ivs = ivs.concat( item.processRaysIvs(rayJob) );
+	});
+	ivs = ivs.concat( this.processRaysIvs(rayJob)); 
+
 	if( this.blocking ) {
-	    display = rayJob.fl ? display : null;
+	    display_color = rayJob.fl ? display_color : null;
 	} else {
-	    display = this.light ? display : null;
+	    display_color = this.light ? display_color : null;
 	}
-	return { ivs: this.processRaysIvs(rayJob), 
-		 display: display,
-		 color: color,
-		 t: rayJob.t
-	       };
+	return _.extend( { ivs: ivs,
+			   t: rayJob.t
+			 },		
+			 display_color );
     },
     processRaysIvs: function( rayJob ) {
 	return [ { i: rayJob.i } ];
@@ -91,15 +117,28 @@ var cellPrototype = {
     },
     getContentsSymbol: function(tform) {
 	if( this.contents.length > 0 ) {
-	    return this.contents[0].symbol;
+	    return { 
+		display: this.contents[0].symbol, 
+		color: this.contents[0].color || [.8,.8,.8] 
+	    };
 	}
 	return null;
     },
+    summarizeContents: function() {
+	var contents = this.contents;
+
+	this.enterActions = _.select( contents, function(item) { return item.enterAction });
+	this.rayProcessors = _.select( contents, function(item) { return item.enterAction });
+    },
+	    
     addContents: function( object ) {
 	this.contents.push( object );
+	object.container = this;
+	this.summarizeContents();
     },
     removeContents: function( obj ) {
 	this.contents = _.without( this.contents, obj );
+	this.summarizeContents();
     }
 }
 
@@ -132,6 +171,7 @@ var OccludingCell = exports.OccludingCell = function(sym) {
     sym = 'o' || sym;
     this.initialize(sym);
     this.description = "A column.";
+    this.occluding = true;
 }
 
 exports.OccludingCell.prototype = _.extend(
@@ -189,7 +229,7 @@ var mirror_transforms = exports.mirror_transforms =
 
 var MirrorCell = exports.MirrorCell = function(symbol) {
     this.initialize(symbol);
-    this.blocking = true;
+    this.blocking = false;
     this.description = "A mirror.";
 }
 
@@ -299,7 +339,9 @@ exports.MirrorCell.prototype = _.extend(
     new EmptyCell(),
     { 
 	getSymbol: function(tform) {
-	    return mirror_transforms[this.symbol][tform||0];
+	    return { display: mirror_transforms[this.symbol][tform||0],
+		     color: this.color || [.8,.8,.8]
+		   };
 	},
 	mirror_actions:  {
 	    '|':  process_rays_vertical_mirror,
@@ -310,13 +352,13 @@ exports.MirrorCell.prototype = _.extend(
 	},
 	processRaysIvs: function(job) {
 	    job.cell = this;
-	    var mirror = this.getSymbol( job.t );
+	    var mirror = this.getSymbol( job.t ).display;
 	    var result = this.mirror_actions[ mirror ](job);	
 	    return result;
 	},
 	tryEnter: function( actor ) {
 	    if( this.enchanted ) {
-		var symbol = this.getSymbol( actor.tform );
+		var symbol = this.getSymbol( actor.tform ).display;
 		actor.transform( { '|': 1, '-': 2, '+': 3, '/' : 7, '\\': 6 }[symbol] )
 	    }
 	    return false;
@@ -340,27 +382,38 @@ var GateWayCell = exports.GateWayCell = function(symbol, tx, ty) {
     this.initialize(symbol);
     this.target = [tx,ty];
     this.description = "A magical gateway to parts unknown.";
+    this.enter_tform = 0;
+    this.exit_tform = 0;
 }
 
 exports.GateWayCell.prototype = _.extend(
     new EmptyCell(),
     {
+	gateWayTform: function(t) {
+	    var limbo = xforms.xtable[t][this.enter_tform];
+	    var tcell = this.map.getCell( this.target[0], this.target[1] );
+	    var target_tform = tcell.exit_tform || 0;
+	    return xforms.xtable[limbo][target_tform];
+	},
 	processRaysIvs: function(job) {    
+	    var t = this.gateWayTform( job.t );
+	    
 	    if( job.x[0] == 0 && job.x[1] == 0 ) {
 		return [ { i: job.i, t: job.t, d: job.d } ];
 	    }
-
-	    var d = xforms.transform( job.x, xforms.xtable[3][job.t], this.target );
-            return [ { i:job.i, t: job.t, d: d } ];
+	    
+	    var d = xforms.transform( job.x, xforms.xtable[3][t], this.target );
+            return [ { i:job.i, t: t, d: d } ];
 	},
 	tryEnter: function(actor) {
 	    var tcell = this.map.getCell( this.target[0], this.target[1] );
-	    return this.contents.length == 0 && tcell.contents.length == 0;
+	    return true;
 	},	    
 	enter: function( actor ) {
 	    var tcell = this.map.getCell( this.target[0], this.target[1] );
 	    tcell.addContents(actor);
 	    actor.setPosition( this.target[0], this.target[1] );
+	    actor.tform = this.gateWayTform( actor.tform );
 	}
     }
 );    

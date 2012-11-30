@@ -18,7 +18,9 @@ var playMode_keymap = {
     's': 'actor.lantern.right',
     '[': 'actor.turn_left',
     ']': 'actor.turn_right',
-    'z': 'enterLookMode'
+    'p': 'actor.makePortal',
+    'z': 'enterLookMode',
+    't': 'enterTargetMode',
 }
 
 var lookMode_keymap = {
@@ -33,9 +35,22 @@ var lookMode_keymap = {
     'z': 'exitLookMode'
 }
 
+var targetMode_keymap = {
+    'k': 'view.move_n',
+    'j': 'view.move_s',
+    'h': 'view.move_w',
+    'l': 'view.move_e',
+    'y': 'view.move_nw',
+    'u': 'view.move_ne',
+    'b': 'view.move_sw',
+    'n': 'view.move_se',
+    'f': 'actor.fire',
+    'z': 'exitTargetMode'
+}
+
 var keymap = playMode_keymap;
 
-var Input = exports.Input = function(term,actor,map, view, update, quit) {
+var Input = exports.Input = function(term,actor,map, view, update, quit, win) {
     this.term = term;
     this.actor = actor;
     this.map = map;
@@ -43,9 +58,23 @@ var Input = exports.Input = function(term,actor,map, view, update, quit) {
     this.quit = quit;
     this.keymap = playMode_keymap;
     this.view = view;
+    this.window = win;
+    this.mode = "Play";
+    this.updateWindow();
 }
 
 exports.Input.prototype = {
+    updateWindow: function() {
+	this.window.erase();
+	this.window.label = " " + this.mode + " Mode Commands ";
+	var row = 1;
+	_.each( this.keymap, function(f,k) {
+	    this.window.typeAt(row, 2, k + ": " + f );
+	    row++;
+	}, this);
+	
+	this.window.refresh();
+    },
     onInput: function() {
 	var charStr = String.fromCharCode(this.term.inputChar);
 	//this.win.addstr(33,0,"Input: '" + charStr + "' (" + charCode + ") - isKey: " + isKey );
@@ -74,13 +103,31 @@ exports.Input.prototype = {
 	this.update();
     },
     enterLookMode: function() {
+	this.mode = "Look";
 	this.keymap = lookMode_keymap; 
 	this.view.enterLookMode( this );
+	this.updateWindow();
     },
+    enterPlayMode: function() {
+	this.mode = "Play";
+	this.keymap = playMode_keymap; 
+	this.updateWindow();
+    },	
     exitLookMode: function() {
-	this.keymap = playMode_keymap;
 	this.view.exitLookMode();
+	this.enterPlayMode();
+    },
+    enterTargetMode: function() {
+	this.mode = "Target";
+	this.keymap = targetMode_keymap; 
+	this.view.enterTargetMode( this );
+	this.updateWindow();
+    },
+    exitTargetMode: function() {
+	this.view.exitTargetMode();
+	this.enterPlayMode();
     }
+
 }    
    
    

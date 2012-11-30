@@ -25,6 +25,8 @@ var xtable = exports.xtable =
       [6,4,5,7,1,2,0,3],
       [7,5,4,6,2,1,3,0] ];
 
+// this table gives the inverse transform
+var inverse = exports.inverse = [ 0, 1, 2, 3, 5, 4, 6, 7];
 
 // return t*x + d
 var transform = exports.transform = function( x, t, d) {

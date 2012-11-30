@@ -17,6 +17,9 @@ var View = exports.View = function(width, height, viewWin, textWin) {
     this.screen = [];
     for(var j = 0; j<this.height; ++j) {
 	this.screen[j] = [];
+	//for(var i=0; i<this.width; ++i) {
+	//    this.screen[j][i] = { colorIndex: 0, style: 0, x: i-this.c_col, y: j-this.c_row }
+	//}
     }
 }
 
@@ -34,24 +37,76 @@ exports.View.prototype = {
 	this.viewWin.erase();
 	var rc = this.c_row;
 	var cc = this.c_col;
+
+	if( this.targetMode ) {
+	    this.updateTarget();
+	}
+
 	this.each( function(unit) {
-	    this.viewWin.set(unit.y+rc+1,unit.x+cc+1,unit.display,unit.colorIndex );
+	    this.viewWin.set(unit.y+rc+1,unit.x+cc+1,unit.display,unit.colorIndex + unit.style );
 	});
 	if( this.lookMode ) {
 	    this.viewWin.setStyle( this.viewY+rc+1,this.viewX+cc+1, 1);
+	    this.updateLook();
 	}
-	this.updateLook();
+    },
+    updateTarget: function() {
+	var self = this;
+	var blockedColor = colors.closestColorIndex( [.8,0,0] );
+	var white = colors.closestColorIndex([.8,.8,.8] );
+
+	this.each( function(square) { square.style = 0 } );
+
+	var x = [ this.viewX, this.viewY ];
+
+	var ca = raycast.center_angle( x );
+	var ext = raycast.extent( x );
+	var range = (x[0])*(x[0]) + (x[1])*(x[1]);
+	var interval = intervals.boundingInterval( ca+ext, ca-ext);
+	
+	var resultIv;
+	var blocked = true;
+	this.lineOfSight( interval, range, function(y,state,iv) {
+	    if( y[0] == x[0] && y[1] == x[1] ) {
+		if( state == 0 ) {
+		    // we found a clear path!
+		    resultIv = iv;
+		    blocked = false;
+		    return true;
+		} else {
+		    resultIv = iv;
+		    blocked = true;
+		}
+	    }
+	});
+	
+	this.lineOfSight( resultIv,range, function(y,state,iv) {
+	    var square = self.getSquare( y[0], y[1] );
+	    if( !square || !square.cell) {
+		self.set(y[0],y[1],"?", [.8,.8,.8],null,0 , 0);
+		square = self.getSquare( y[0], y[1] );
+	    }
+	    if( blocked ) {
+		square.style = blockedColor + 1 - square.colorIndex;
+	    } else {
+		square.style = 1 - square.colorIndex;
+	    }
+	});
+
     },
     clear:  function() {
 	for(var j=0; j<this.height; ++j) {
 	    for(var i=0; i< this.width; ++i) {
 		if( this.screen[j][i] )
-		    this.screen[j][i] = null;
+		    this.screen[j][i] = {colorIndex:0, style:0};
 	    }
 	}
     },
-    set: function(x,y,display,color,cell,tform) {
+    set: function(x,y,display,color,cell,tform,style) {
+	style = style || 0;
 
+	if(!color)
+	    return;
 	if( color[0] < 0.05 && color[1] < 0.05 && color[2] < 0.05 )
 	    return;
 	if(!display)
@@ -70,7 +125,7 @@ exports.View.prototype = {
 	    cell: cell,
 	    tform: tform,
 	    color: color,
-	    colorw: 1
+	    style: style
 	}
     },
     inView: function(x,y) {
@@ -80,6 +135,9 @@ exports.View.prototype = {
 	return row>=0 && col>=0 && col< this.width && row < this.height
     },
     getSquare: function(x,y) {
+	if( !this.inView(x,y) )
+	    return null;
+
 	return this.screen[y+this.c_row][x+this.c_col];
     },
     getCell: function(x,y) {
@@ -91,11 +149,11 @@ exports.View.prototype = {
     },
     getDescription: function(x,y) {
 	var square = this.getSquare(x,y);
-	if( square ) {
+	if( square && square.cell ) {
 	    return square.cell.getDescription( square.tform );
 	}
 	else
-	    return "";
+	    return "Unable to see location.";
     },
     enterLookMode: function(input) {
 	this.viewX = 0;
@@ -105,6 +163,15 @@ exports.View.prototype = {
     exitLookMode: function() {
 	this.textWin.erase();
 	this.lookMode = false;
+    },
+    enterTargetMode: function(input) {
+	this.viewX = 0;
+	this.viewY = 0;
+	this.targetMode = true;
+    },
+    exitTargetMode: function() {
+	this.textWin.erase();
+	this.targetMode = false;
     },
     updateLook: function() {
 	if( this.lookMode ) {
@@ -141,7 +208,60 @@ exports.View.prototype = {
     },
     move_sw: function() {
 	this.moveView(-1,1);
-    }
+    },
+    lineOfSight: function(interval, range, cb) {
+	var initial_interval = intervals.boundingInterval( ca + ext, ca - ext );
+	var firstJob = { i: interval,
+			 x: [0,0],
+			 state: 0 // not blocked
+		       }
+	var queue = [firstJob];
+	var done = false;
+	while( !done && queue.length > 0) {
+	    var job = queue.shift();
+	    var x = job.x;
+	    var square = this.getSquare( x[0], x[1] );
+
+	    done = cb( x, job.state, job.i );
+	    
+	    if( done )
+		continue;
+
+	    var cell = square && square.cell;
+	    var iv;
+	    var blocked_iv;
+	    if( job.state == 0 ) {
+		if( !cell || cell.isBlocking()  ) {
+		    iv = [];
+		    blocked_iv = job.i;
+		} else if( cell.isOccluding() ) {
+		    var ca = raycast.center_angle( job.x );
+		    var ext = raycast.extent( job.x );
+	 	    var occlusion = intervals.boundingInterval( ca + ext, ca - ext );
+		    blocked_iv = intervals.intersection( occlusion, job.i );
+		    iv = intervals.difference( job.i, blocked_iv );
+		} else {
+		    blocked_iv = [];
+		    iv = job.i;
+		}
+	    } else {
+		blocked_iv = job.i;
+		iv = [];
+	    }
+
+	    if( job.x[0] * job.x[0] + job.x[1] * job.x[1] < range ) {
+		var exits = raycast.exitIntervals( job.x[0], job.x[1] );
+		_.each( exits,  function(exit) {
+		    var iva = intervals.intersection( iv, exit.i );
+		    var ivb = intervals.intersection( blocked_iv, exit.i );
+		    if( iva.length > 0 )
+			queue.push( { i: iva, state: 0, x: exit.x } );
+		    if( ivb.length > 0 )
+			queue.push( { i: ivb, state: 1, x: exit.x } );
+		});
+	    }
+	}
+    }    
 }
 
 var vision = exports.vision = function (actor, view) {

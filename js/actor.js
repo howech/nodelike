@@ -1,5 +1,6 @@
 var xforms = require('./xforms');
 var intervals = require('./intervals');
+var portal = require('./portal');
 var actorPrototype = {
     move_n: function()  { this.attempt_move( 0,-1); },
     move_s: function()  { this.attempt_move( 0, 1); },
@@ -20,10 +21,10 @@ var actorPrototype = {
 	if(dx != 0 && dy != 0 ) {
 	    var a = xforms.transform( [dx,0], this.tform, this.position );
 	    var ta = this.map.getCell( a[0], a[1] );
-	    if( ta.blocking ) {
+	    if( !ta || ta.blocking ) {
 		var b = xforms.transform( [0,dy], this.tform, this.position );
 		var tb = this.map.getCell( b[0], b[1] );
-		if(tb.blocking)
+		if(!tb || tb.blocking)
 		    return;
 	    }
 	}
@@ -47,6 +48,9 @@ var actorPrototype = {
     },
     setPosition: function(x,y) {
 	this.position = [x,y];
+    },
+    makePortal: function() {
+	var p = new portal.Portal( this.container, this);
     },
     symbol: '@'
 };
