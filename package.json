@@ -27,7 +27,7 @@
   "bundleDependencies": [
   ],
   "license": "Apache-2.0",
-  "engine": {	
-    "node": ">=0.4"
+  "engines": {	
+    "node": ">=0.8"
   }
 }
