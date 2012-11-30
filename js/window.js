@@ -9,7 +9,8 @@ var Window = exports.Window = function(height, width, term) {
     this.border = false;
     this.label = null;
     this.initialize();
-    this.borderChars = [ "-", "|", "+", "+", "+", "+" ];
+    this.borderChars = [ 0x2500, 0x2502, 0x250c, 0x2510, 0x2514, 0x2518 ]; 
+    //[ "-", "|", "+", "+", "+", "+" ];
     this.borderStyle = 0;
 };
 
@@ -65,15 +66,15 @@ exports.Window.prototype = {
 	    var right = this.width-1;
 	    var i;
 	    for(i=1; i<right; ++i ) {
-		this.charBuffer[0][i] = this.charBuffer[bottom][i] = this.borderChars[0].charCodeAt(0);
+		this.charBuffer[0][i] = this.charBuffer[bottom][i] = this.borderChars[0]; //.charCodeAt(0);
 	    }
 	    for(i=1; i<bottom; ++i ) {
-		this.charBuffer[i][0] = this.charBuffer[i][right] = this.borderChars[1].charCodeAt(0);
+		this.charBuffer[i][0] = this.charBuffer[i][right] = this.borderChars[1]; //.charCodeAt(0);
 	    }
-	    this.charBuffer[0][0] = this.borderChars[2].charCodeAt(0);
-	    this.charBuffer[0][right] = this.borderChars[3].charCodeAt(0);
-	    this.charBuffer[bottom][0] = this.borderChars[4].charCodeAt(0);
-	    this.charBuffer[bottom][right] = this.borderChars[5].charCodeAt(0);
+	    this.charBuffer[0][0] = this.borderChars[2]; //.charCodeAt(0);
+	    this.charBuffer[0][right] = this.borderChars[3]; //.charCodeAt(0);
+	    this.charBuffer[bottom][0] = this.borderChars[4]; //.charCodeAt(0);
+	    this.charBuffer[bottom][right] = this.borderChars[5]; //.charCodeAt(0);
 	    if( this.label ) {
 		this.typeAt(0, Math.floor( this.width/2 - this.label.length/2) , this.label )
 	    }
