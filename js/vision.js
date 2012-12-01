@@ -22,7 +22,7 @@ var View = exports.View = function(width, height, viewWin, textWin) {
 	//}
     }
 }
-var memoryColor = [.5,.5,.8];
+var memoryColor = [.5,.5,.6];
 
 exports.View.prototype = {
     each: function(func, context) {
@@ -365,7 +365,10 @@ var vision = exports.vision = function (actor, view) {
 	var color  = processedRays.color; // || [.8,.8,.8];
     	
 	if( view.set( N,M, processedRays.display, color, cell, processedRays.t ) ) {
-	    if( N!=0 || M!=0 )
+	    if( ( N!=0 || M!=0 ) &&
+		( processedRays.t == actor.tform ) &&
+		( actor.position[0] == job.d[0] && actor.position[1] == job.d[1] )
+	      )
 		actor.memory.imprint( [N,M], processedRays.display);
 	}
 	_.each( processedRays.ivs,  function( iv_plus ) {
