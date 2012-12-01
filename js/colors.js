@@ -1,5 +1,8 @@
 var nc; // = require('ncurses');
 var _ = require('underscore');
+var LRU = require('lru-cache');
+
+var colorCache = new LRU(512);
 
 //var LRU = require("lru-cache"), cache = LRU( 512 );
 
@@ -94,7 +97,14 @@ var closestColorIndex = exports.closestColorIndex = function(r,g,b) {
     g = toHexPair( Math.floor( g * 255 ) );
     b = toHexPair( Math.floor( b * 255 ) );
 
-    return term._parseColor( "(#" + r + g + b + ")" ).style;
+    var key = "(#" + r + g + b + ")";
+    
+    var result = colorCache.get(key)
+    if( !result ) {
+	result = term._parseColor(key ).style;	
+	colorCache.set(key,result);
+    }
+    return result; 
 }
 
 var addColors = exports.addColors = function( color1, color2 ) {

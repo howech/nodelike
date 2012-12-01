@@ -68,6 +68,12 @@ exports.boundingInterval = function boundingInterval() {
 exports.normalize = function normalize( iva ) {
     var result = [];
     var last = null;
+    var ok = true;
+    for(i = 1; i< iva.length && ok; ++i) {
+	ok = iva[i-1] != iva[i];
+    }
+    if(ok)
+	return(iva);
 
     iva.forEach( function(x) {
 	if(last == null) {

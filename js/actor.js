@@ -54,7 +54,7 @@ var actorPrototype = {
 	}
 	this.position = [x,y];
     },
-    makePortal: function() {
+    make_portal: function() {
 	var p = new portal.Portal( this.container, this);
 	return p;
     },

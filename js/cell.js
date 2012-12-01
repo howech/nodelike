@@ -98,15 +98,16 @@ var cellPrototype = {
 	});
 	ivs = ivs.concat( this.processRaysIvs(rayJob)); 
 
-	if( this.blocking ) {
-	    display_color = rayJob.fl ? display_color : null;
-	} else {
-	    display_color = this.light ? display_color : null;
+	if( (this.blocking && !rayJob.fl ) || 
+	    ( !this.blocking && !this.light ) ) {
+	    delete display_color.color;
+	    delete display_color.display;
 	}
-	return _.extend( { ivs: ivs,
-			   t: rayJob.t
-			 },		
-			 display_color );
+	return { ivs: ivs,
+		 t: rayJob.t,
+		 display: display_color.display,
+		 color: display_color.color 
+	       };
     },
     processRaysIvs: function( rayJob ) {
 	return [ { i: rayJob.i } ];
@@ -219,6 +220,25 @@ exports.CandleCell.prototype = _.extend(
 		    range: 10
 		};
 	    return this.lightSourceObject;
+	},
+	actions: function() {
+	    if(this.staticLightSource) {
+		return { b: "selection.blow_out" }
+	    } else {
+		return { l: "selection.light_candle" }
+	    }
+	},
+	blow_out:  function(input) {
+	    this.staticLightSource = false;
+	    this.map.static_light = false;
+	    this.color = [.5,.5,.5];
+	    input.cancel();
+	},
+	light_candle:  function(input) {
+	    this.staticLightSource = true;
+	    this.map.static_light = false;
+	    this.color = [.8,.8,.5];
+	    input.cancel();
 	}
     });
 

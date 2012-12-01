@@ -212,7 +212,7 @@ var start = exports.start = function(t) {
     player.position = [28,28];    
 
     view = new vision.View(30,30,viewWin,textWin);
-    inputObj = new input.Input(term, player, main_map, view, update, quit, inputWin);
+    inputObj = new input.Input(term, player, main_map, view, update, quit, inputWin, textWin);
 
     update();
 }

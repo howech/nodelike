@@ -15,20 +15,25 @@ exports.Memory.prototype = {
     },
     key: function(x) {
 	var y = xforms.transform(x,this.tform, this.position);
-	return y[0]+" "+y[1];
+	return y;
+//return y[0]+" "+y[1];
     },
     imprint: function(x, display ) {
 	var key = this.key(x);
-	this.memory[key] = display;
+	var s = this.memory[key[1]];
+	if( !s )
+	    s = this.memory[ key[1] ] = [];
+	s[key[0]] = display;
     },
     recall: function(x) {
 	var key = this.key(x);
-	return this.memory[key];
+	var s = this.memory[key[1]]; 
+	return s && s[key[0]];
     },
     clear: function() {
 	this.position = [0,0];
 	this.tform = 0;
 	this.itform = 0;
-	this.memory = {};
+	this.memory = [];
     }	
 }

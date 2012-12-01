@@ -54,6 +54,11 @@ exports.View.prototype = {
 	}
 
 	this.each( function(unit) {
+
+	    if( _.isUndefined( unit.colorIndex) )
+		unit.colorIndex = colors.closestColorIndex(unit.color);
+
+
 	    this.viewWin.set(unit.y+rc+1,unit.x+cc+1,unit.display,unit.colorIndex + unit.style );
 	});
 	if( this.lookMode ) {
@@ -173,6 +178,33 @@ exports.View.prototype = {
 	}
 	return true;
     },
+    setlazy: function(x,y,display,color,cell,tform,style) {
+	style = style || 0;
+
+	if(!color)
+	    return false;
+	if( color[0] < 0.05 && color[1] < 0.05 && color[2] < 0.05 )
+	    return false;
+	if(!display)
+	    return false;
+
+	//colorIndex = colors.closestColorIndex(color);
+
+	var row = y+this.c_row;
+	var col = x+this.c_col;
+
+	this.screen[row][col] = { 
+	    x: x,
+	    y: y,
+	    display: display,
+	    //colorIndex: colorIndex,
+	    cell: cell,
+	    tform: tform,
+	    color: color,
+	    style: style
+	}
+	return true;
+    },
     inView: function(x,y) {
 	var row = y+this.c_row;
 	var col = x+this.c_col;
@@ -230,6 +262,19 @@ exports.View.prototype = {
 	    this.viewY += dy;
 	}
     },
+    selectView: function(dx,dy,input) {
+	if( ! this.inView( dx, dy ) ) {
+	    input.cancel();
+	} else {
+	    var square = this.getSquare( dx, dy );
+	    var cell = square && square.cell;
+	    var keymap = cell && cell.actions && cell.actions();
+	    if( !keymap )
+		input.cancel();
+	    else
+		input.setSelectionKeymap( cell, keymap );
+	}
+    },
     move_n: function() {
 	this.moveView(0,-1);
     },
@@ -253,6 +298,33 @@ exports.View.prototype = {
     },
     move_sw: function() {
 	this.moveView(-1,1);
+    },
+    select_n: function(input) {
+	this.selectView(0,-1,input);
+    },
+    select_s: function(input) {
+	this.selectView(0,1,input);
+    },
+    select_e: function(input) {
+	this.selectView(1,0,input);
+    },
+    select_w: function(input) {
+	this.selectView(-1,0,input);
+    },
+    select_ne: function(input) {
+	this.selectView(1,-1,input);
+    },
+    select_nw: function(input) {
+	this.selectView(-1,-1,input);
+    },
+    select_se: function(input) {
+	this.selectView(1,1,input);
+    },
+    select_sw: function(input) {
+	this.selectView(-1,1,input);
+    },
+    select_center: function(input) {
+	this.selectView(0,0,input);
     },
     lineOfSight: function(interval, range, cb) {
 	var initial_interval = intervals.boundingInterval( ca + ext, ca - ext );
@@ -320,9 +392,9 @@ var vision = exports.vision = function (actor, view) {
     view.clear();
     view.recall(actor.memory);
 
-    var firstJob = { map:map, 
-		     i:initial_interval, 
-		     x:[0,0], 
+    var firstJob = { map: map, 
+		     i: initial_interval, 
+		     x: [0,0], 
 		     t: actor.tform, 
 		     d: d, 
 		     c: 1,
@@ -364,28 +436,49 @@ var vision = exports.vision = function (actor, view) {
 	
 	var color  = processedRays.color; // || [.8,.8,.8];
     	
-	if( view.set( N,M, processedRays.display, color, cell, processedRays.t ) ) {
+	if( view.setlazy( N,M, processedRays.display, color, cell, processedRays.t ) ) {
 	    if( ( N!=0 || M!=0 ) &&
 		( processedRays.t == actor.tform ) &&
 		( actor.position[0] == job.d[0] && actor.position[1] == job.d[1] )
 	      )
 		actor.memory.imprint( [N,M], processedRays.display);
 	}
-	_.each( processedRays.ivs,  function( iv_plus ) {
+
+	//_.each( processedRays.ivs,  function( iv_plus ) {
+	for( var ivs_i = 0; ivs_i < processedRays.ivs.length; ++ivs_i) {
+	    var iv_plus = processedRays.ivs[ivs_i];
 	    var exits = raycast.exitIntervals( N, M );
-	    _.each( exits,  function(exit) {
+	    //_.each( exits,  function(exit) {
+	    for(var exits_i = 0; exits_i < exits.length; ++exits_i ) {
+		var exit = exits[ exits_i ];
 		var newIv = intervals.intersection( iv_plus.i, exit.i );
 		if(newIv.length > 0) {
-		    var newJob = _.defaults( 
-			{i: newIv, fl: cell.light },
-			exit,
-			iv_plus,
-			job
-		    );
+		    var newJob =
+			{i: newIv, 
+			 fl: cell.light, 
+			 x: exit.x,
+			 d: iv_plus.d || job.d,
+			 t: _.isUndefined( iv_plus.t ) ? job.t : iv_plus.t,
+			 c: iv_plus.c || job.c,
+			 map: iv_plus.map || job.map
+			};
+
+			//{ map: map, 
+			//  i: initial_interval, 
+			//  x: [0,0], 
+			//  t: actor.tform, 
+			//  d: d, 
+			//  c: 1,
+			//  fl: true
+			//};
+
+
 		    queue.push( newJob );
 		}
-	    });
-	});
+	    }
+	    //});
+	}
+	//});
     }
 }
 
