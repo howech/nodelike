@@ -26,14 +26,15 @@ var playMode_keymap = {
     'left': 'actor.move_w',
     'right': 'actor.move_e',
 
-    'd': 'actor.lantern.decrease_aperture',
-    'e': 'actor.lantern.increase_aperture',
-    'x': 'actor.lantern.toggle',
-    'a': 'actor.lantern.left',
-    's': 'actor.lantern.right',
+    '|': 'actor.lantern.decrease_aperture',
+    '\\': 'actor.lantern.increase_aperture',
+    '-': 'actor.lantern.toggle',
+    '{': 'actor.lantern.left',
+    "}": 'actor.lantern.right',
 
     '[': 'actor.turn_left',
     ']': 'actor.turn_right',
+    '=': 'actor.move_n',
 
     'p': 'actor.make_portal',
     'z': 'look_mode',
