@@ -1,6 +1,7 @@
 var xforms = require('./xforms');
 var intervals = require('./intervals');
 var portal = require('./portal');
+var memory = require('./memory');
 var actorPrototype = {
     move_n: function()  { this.attempt_move( 0,-1); },
     move_s: function()  { this.attempt_move( 0, 1); },
@@ -14,6 +15,7 @@ var actorPrototype = {
     turn_right: function() { this.transform(5); },
     transform: function(t) {
 	this.tform = xforms.xtable[this.tform][t];
+	this.memory.transform(t);
     },
     attempt_move: function(dx,dy) {
 
@@ -43,10 +45,14 @@ var actorPrototype = {
 	    current_cell.tryExit( this ) &&
 		target_cell.tryEnter( this ) &&
 		current_cell.exit( this ) &&
-		target_cell.enter( this );  // target cell will call setPosition...
+		target_cell.enter( this );
 	}
     },
     setPosition: function(x,y) {
+	if( this.position ) {
+	    this.memory.move( -this.position[0], -this.position[1] )
+	    this.memory.move(x,y);
+	}
 	this.position = [x,y];
     },
     makePortal: function() {
@@ -98,6 +104,7 @@ var Actor = exports.Actor = function(map) {
     this.map = map;
     this.lantern = new Lantern();
     this.tform = 0;
+    this.memory = new memory.Memory();
 };
 exports.Actor.prototype = actorPrototype;
 

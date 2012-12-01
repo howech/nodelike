@@ -1,4 +1,4 @@
-var _ = require('./underscore');
+var _ = require('underscore');
 
 var Window = exports.Window = function(height, width, term) {
     this.row = 0;

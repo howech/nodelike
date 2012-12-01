@@ -31,6 +31,7 @@ var cellPrototype = {
 	var blocker = _.find( this.enterActions, function(item) {
 	    return item.enter(actor);
 	});
+
 	if( blocker )
 	    return true;
 	
@@ -87,6 +88,10 @@ var cellPrototype = {
 	var display_color = this.getMapSymbol(rayJob.t);
 
 	display_color.color = colors.colorMask( display_color.color, rayJob.c );
+
+	if( this.tint ) {
+	    rayJob.c = colors.colorMask( this.tint, rayJob.c )
+	}
 
 	_.each( this.rayProcessors, function( item ) {
 	    ivs = ivs.concat( item.processRaysIvs(rayJob) );
@@ -359,7 +364,8 @@ exports.MirrorCell.prototype = _.extend(
 	tryEnter: function( actor ) {
 	    if( this.enchanted ) {
 		var symbol = this.getSymbol( actor.tform ).display;
-		actor.transform( { '|': 1, '-': 2, '+': 3, '/' : 7, '\\': 6 }[symbol] )
+		v = xforms.xtable[ actor.tform ][ { '|': 1, '-': 2, '+': 3, '/' : 7, '\\': 6 }[symbol] ];
+		actor.transform( xforms.xtable[ xforms.inverse[ actor.tform ] ][v]);
 	    }
 	    return false;
 	}
@@ -413,7 +419,9 @@ exports.GateWayCell.prototype = _.extend(
 	    var tcell = this.map.getCell( this.target[0], this.target[1] );
 	    tcell.addContents(actor);
 	    actor.setPosition( this.target[0], this.target[1] );
-	    actor.tform = this.gateWayTform( actor.tform );
+	    var v = this.gateWayTform( actor.tform );    
+	    actor.transform( xforms.xtable[ xforms.inverse[ actor.tform ] ][v]);
+	    return true;
 	}
     }
 );    

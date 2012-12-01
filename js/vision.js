@@ -22,6 +22,7 @@ var View = exports.View = function(width, height, viewWin, textWin) {
 	//}
     }
 }
+var memoryColor = [.5,.5,.8];
 
 exports.View.prototype = {
     each: function(func, context) {
@@ -30,6 +31,16 @@ exports.View.prototype = {
 	    for(var i=0; i< this.width; ++i) {
 		if( this.screen[j][i] )
 		    func.call( context, this.screen[j][i] );
+	    }
+	}
+    },
+    recall: function(memory) {
+	for(var j=0, y=-this.c_row; j<this.height; ++j,++y) {
+	    for(var i=0, x=-this.c_col; i< this.width; ++i,++x) {
+		var display = memory.recall([x,y]);
+		if(display) {
+		    this.set(x,y,display,memoryColor,null,0,0);
+		}
 	    }
 	}
     },
@@ -106,11 +117,11 @@ exports.View.prototype = {
 	style = style || 0;
 
 	if(!color)
-	    return;
+	    return false;
 	if( color[0] < 0.05 && color[1] < 0.05 && color[2] < 0.05 )
-	    return;
+	    return false;
 	if(!display)
-	    return;
+	    return false;
 
 	colorIndex = colors.closestColorIndex(color);
 
@@ -127,6 +138,7 @@ exports.View.prototype = {
 	    color: color,
 	    style: style
 	}
+	return true;
     },
     inView: function(x,y) {
 	var row = y+this.c_row;
@@ -273,6 +285,7 @@ var vision = exports.vision = function (actor, view) {
 
     map.clearVisible();
     view.clear();
+    view.recall(actor.memory);
 
     var firstJob = { map:map, 
 		     i:initial_interval, 
@@ -318,8 +331,10 @@ var vision = exports.vision = function (actor, view) {
 	
 	var color  = processedRays.color; // || [.8,.8,.8];
     	
-	view.set( N,M, processedRays.display, color, cell, processedRays.t );
-	
+	if( view.set( N,M, processedRays.display, color, cell, processedRays.t ) ) {
+	    if( N!=0 || M!=0 )
+		actor.memory.imprint( [N,M], processedRays.display);
+	}
 	_.each( processedRays.ivs,  function( iv_plus ) {
 	    var exits = raycast.exitIntervals( N, M );
 	    _.each( exits,  function(exit) {
