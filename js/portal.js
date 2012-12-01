@@ -18,11 +18,18 @@ var Portal = exports.Portal = function(cell,generator) {
     this.description = "A magical gateway to parts unknown.";
     this.rayProcessor = true;
     this.enterAction = true;
+    this.order = 1;
 }
 
 exports.Portal.prototype = _.extend(
     {},
     {
+	transform: function(t) {
+	    
+	    this.enter_tform = xforms.xtable[xforms.inverse[t]][this.enter_tform];
+	    this.exit_tform = xforms.xtable[ this.exit_tform][t];
+	},
+
 	gateWayTform: function(t) {
 	    if( this.target ) {
 		var limbo = xforms.xtable[t][this.enter_tform];

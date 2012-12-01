@@ -105,6 +105,39 @@ exports.View.prototype = {
 	});
 
     },
+    fire: function(projectile) {
+	var self = this;
+
+	this.each( function(square) { square.style = 0 } );
+
+	var x = [ this.viewX, this.viewY ];
+
+	var ca = raycast.center_angle( x );
+	var ext = raycast.extent( x );
+	var range = (x[0])*(x[0]) + (x[1])*(x[1]);
+	var interval = intervals.boundingInterval( ca+ext, ca-ext);
+	
+	var furthest = -1;
+	var start = this.getSquare(0,0);
+	var f_square = start;
+	this.lineOfSight( interval, range, function(y,state,iv) {
+	    var square = self.getSquare( y[0], y[1] );
+	    var cell = square && square.cell;
+	    if(!cell)
+		return;
+	    var r = y[0]*y[0] + y[1]*y[1];
+	    if( r > furthest && !cell.unenterable ) {
+		furthest = r;
+		f_square = square;
+	    }
+	});
+	
+	projectile.transform( xforms.inverse[ start.tform ] );
+	projectile.transform( f_square.tform );
+	projectile.container.removeContents( projectile );
+	f_square.cell.addContents( projectile );
+    },
+
     clear:  function() {
 	for(var j=0; j<this.height; ++j) {
 	    for(var i=0; i< this.width; ++i) {

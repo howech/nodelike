@@ -18,7 +18,6 @@ var actorPrototype = {
 	this.memory.transform(t);
     },
     attempt_move: function(dx,dy) {
-
 	// check for moving diagonally through through blocking elements
 	if(dx != 0 && dy != 0 ) {
 	    var a = xforms.transform( [dx,0], this.tform, this.position );
@@ -57,6 +56,7 @@ var actorPrototype = {
     },
     makePortal: function() {
 	var p = new portal.Portal( this.container, this);
+	return p;
     },
     symbol: '@'
 };
@@ -105,6 +105,8 @@ var Actor = exports.Actor = function(map) {
     this.lantern = new Lantern();
     this.tform = 0;
     this.memory = new memory.Memory();
+    this.order = -1;
+    this.color = [1,1,1];
 };
 exports.Actor.prototype = actorPrototype;
 

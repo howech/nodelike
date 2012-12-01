@@ -177,6 +177,15 @@ var start = exports.start = function(t) {
     main_map.setCell(13,19, new cell.CandleCell());
     main_map.setCell(17,19, new cell.CandleCell());
 
+    for(i=0;i<30;++i) { 
+	main_map.setCell(0,i, new cell.WallCell() );
+	main_map.setCell(29,i, new cell.WallCell() );
+    }
+    for(i=1;i<29;++i) { 
+	main_map.setCell(i,0, new cell.WallCell() );
+	main_map.setCell(i,29, new cell.WallCell() );
+    }
+
     var reddish = [.8,.3,.3]
     _.extend( main_map.getCell(14,18), 
 	      { enchanted: true,
@@ -199,8 +208,8 @@ var start = exports.start = function(t) {
 
     player = new actor.Actor( main_map );
 
-    main_map.getCell(29,29).enter(player);
-    player.position = [29,29];    
+    main_map.getCell(28,28).enter(player);
+    player.position = [28,28];    
 
     view = new vision.View(30,30,viewWin,textWin);
     inputObj = new input.Input(term, player, main_map, view, update, quit, inputWin);

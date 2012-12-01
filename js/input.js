@@ -44,7 +44,7 @@ var targetMode_keymap = {
     'u': 'view.move_ne',
     'b': 'view.move_sw',
     'n': 'view.move_se',
-    'f': 'actor.fire',
+    'f': 'fire',
     'z': 'exitTargetMode'
 }
 
@@ -126,8 +126,13 @@ exports.Input.prototype = {
     exitTargetMode: function() {
 	this.view.exitTargetMode();
 	this.enterPlayMode();
+    },
+    fire: function() {
+	var projectile = this.actor.makePortal();
+	this.view.fire( projectile );
+	this.view.exitTargetMode();
+	this.enterPlayMode();
     }
-
 }    
    
    

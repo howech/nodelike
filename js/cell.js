@@ -138,6 +138,7 @@ var cellPrototype = {
 	    
     addContents: function( object ) {
 	this.contents.push( object );
+	this.contents = _.sortBy( this.contents, function(item,i) { return item.order } );
 	object.container = this;
 	this.summarizeContents();
     },
@@ -157,6 +158,7 @@ var WallCell = exports.WallCell = function(sym) {
     sym = '#' || sym;
     this.initialize(sym);
     this.blocking = true;
+    this.unenterable = true;
     this.description = "A wall.";
 }
 
@@ -177,6 +179,7 @@ var OccludingCell = exports.OccludingCell = function(sym) {
     this.initialize(sym);
     this.description = "A column.";
     this.occluding = true;
+    this.unenterable = true;
 }
 
 exports.OccludingCell.prototype = _.extend(
@@ -236,6 +239,7 @@ var MirrorCell = exports.MirrorCell = function(symbol) {
     this.initialize(symbol);
     this.blocking = false;
     this.description = "A mirror.";
+    this.unenterable = true;
 }
 
 
