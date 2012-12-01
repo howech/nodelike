@@ -364,8 +364,7 @@ exports.MirrorCell.prototype = _.extend(
 	tryEnter: function( actor ) {
 	    if( this.enchanted ) {
 		var symbol = this.getSymbol( actor.tform ).display;
-		v = xforms.xtable[ actor.tform ][ { '|': 1, '-': 2, '+': 3, '/' : 7, '\\': 6 }[symbol] ];
-		actor.transform( xforms.xtable[ xforms.inverse[ actor.tform ] ][v]);
+		actor.transform( { '|': 1, '-': 2, '+': 3, '/' : 7, '\\': 6 }[symbol] );
 	    }
 	    return false;
 	}
@@ -419,8 +418,7 @@ exports.GateWayCell.prototype = _.extend(
 	    var tcell = this.map.getCell( this.target[0], this.target[1] );
 	    tcell.addContents(actor);
 	    actor.setPosition( this.target[0], this.target[1] );
-	    var v = this.gateWayTform( actor.tform );    
-	    actor.transform( xforms.xtable[ xforms.inverse[ actor.tform ] ][v]);
+	    actor.transform( this.gateWayTform( 0 ) );    
 	    return true;
 	}
     }

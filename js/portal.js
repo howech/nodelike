@@ -66,8 +66,7 @@ exports.Portal.prototype = _.extend(
 	    var tcell = this.target.container;
 	    tcell.addContents(actor);
 	    actor.setPosition( tcell.x, tcell.y );
-	    var v = this.gateWayTform( actor.tform );
-	    actor.transform( xforms.xtable[ xforms.inverse[ actor.tform ] ][v]);
+	    actor.transform( this.gateWayTform( 0 ) );
 	    return true;
 	}
 
