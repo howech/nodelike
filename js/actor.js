@@ -97,6 +97,28 @@ var actorPrototype = {
 	
 	input.setSelectionKeymap( null, keymap );
     },
+    inventory: function( input ) {
+	var items = _.filter( this.contents, function(item) { return item.holdable } );
+	
+	var keymap = { z: "cancel",
+		       _handler: function( item ) {
+			   this.actor.select_item( item, input );
+		       }
+		     };
+
+	for(i=0;i<25 && i<items.length; ++i) {
+	    keymap[ String.fromCharCode( 'a'.charCodeAt(0) + i ) ] = items[i];
+	}
+	
+	input.setSelectionKeymap( null, keymap );
+    },
+    select_item: function(item,input) {
+	var keymap = item && _.isFunction( item.actions ) && item.actions();
+	if( !keymap )
+	    input.cancel();
+	else
+	    input.setSelectionKeymap( item, keymap );
+    },
     drop_item: function(item) {
 	item.container.removeContents(item);
 	this.container.addContents(item);
@@ -105,9 +127,16 @@ var actorPrototype = {
 	item.container.removeContents( item );
 	this.addContents( item );
     },
-    summarizeContents: function() {
+    take_it: function(input) {
+	this.take_item( input.selection );
+	input.cancel();
     },
-	    
+    getLightSources: function() {
+	return this.lightSources || [];
+    },
+    summarizeContents: function() {
+	this.lightSources = _.select( this.contents, function(item) { return item.lightSource });
+    },	    
     addContents: function( object ) {
 	this.contents.push( object );
 	object.container = this;

@@ -51,6 +51,13 @@ var mapPrototype = {
 		if( cell.staticLightSource ) {
 		    vision.light( cell.getStaticLightSource(), this );
 		}
+		if( cell.lightSources && cell.lightSources.length > 0 ) {
+		    _.each( cell.lightSources, function(lsi) {
+			var ls = lsi.getLightSource();
+			ls.position = [cell.x,cell.y];
+			vision.light( ls, this );
+		    },this);
+		}
 	    });
 	    
 	    this.each( function(cell) {
@@ -82,6 +89,7 @@ exports.Map = function(width, height) {
 	    this.map[i][j] = new cell.EmptyCell();
 	    this.map[i][j].x = j;
 	    this.map[i][j].y = i;
+	    this.map[i][j].map = this;
 	}
     }
 };

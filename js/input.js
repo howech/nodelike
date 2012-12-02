@@ -41,7 +41,9 @@ var playMode_keymap = {
     't': 'target_mode',
     'a': 'activate_mode',
     ',': 'actor.pick_up',
-    'd': 'actor.drop'
+    'd': 'actor.drop',
+    'i': 'actor.inventory',
+    'A': 'actor.container.inventory'
 };
 
 var activateMode_keymap = {
@@ -165,8 +167,6 @@ exports.Input.prototype = {
 	this.window.label = " " + this.mode + " Mode Commands ";
 	var self = this;
  
-
-
 	var command_tree = {};
 	var raw = {};
 
@@ -192,7 +192,8 @@ exports.Input.prototype = {
 	    }
 	});
 
-	var print_tree = function( tree, row, col ) {
+	var row = 1;
+	var print_tree = function( tree, col ) {
 	    var leaves = [];
 	    var subtrees = [];
 	    _.each( tree, function(sub,name) { 
@@ -211,11 +212,10 @@ exports.Input.prototype = {
 	    _.each( subtrees, function(tname) {
 		self.window.typeAt( row, col, capitalize(tname) + " Commands" );
 		row++;
-		print_tree( tree[tname], row, col );
+		print_tree( tree[tname], col );
 	    });
 	}
 
-	var row = 1;
 	_.each( raw, function(d,k) {
 	    self.window.typeAt( row++, 2, k + ": " +  d );
 	});

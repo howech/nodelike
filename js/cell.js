@@ -136,6 +136,13 @@ var cellPrototype = {
 
 	this.enterActions = _.select( contents, function(item) { return item.enterAction });
 	this.rayProcessors = _.select( contents, function(item) { return item.enterAction });
+
+	var lsCount = this.lightSources && this.lightSources.length;
+	this.lightSources = _.select( this.contents, function(item) { return item.lightSource });
+	var newLScount = this.lightSources && this.lightSources.length;
+
+	if( lsCount != newLScount ) 
+	    this.map.static_light = false;
     },
 	    
     addContents: function( object ) {
@@ -148,8 +155,33 @@ var cellPrototype = {
 	this.contents = _.without( this.contents, obj );
 	obj.container = null;
 	this.summarizeContents();
+    },
+    inventory: function( input ) {
+	var items = _.filter( this.contents, function(item) { return item.holdable } );
+	
+	var keymap = { z: "cancel",
+		       _handler: function( item ) {
+			   this.actor.container.select_item( item, input );
+		       }
+		     };
+
+	for(i=0;i<25 && i<items.length; ++i) {
+	    keymap[ String.fromCharCode( 'a'.charCodeAt(0) + i ) ] = items[i];
+	}
+	
+	input.setSelectionKeymap( null, keymap );
+    },
+    select_item: function(item,input) {
+	var keymap = item && _.isFunction( item.actions ) && item.actions();
+	if( !keymap )
+	    input.cancel();
+	else {
+	    if(!keymap[','] ) {
+		keymap[','] = "actor.take_it";
+	    }
+	    input.setSelectionKeymap( item, keymap );
+	}
     }
-    
 }
 
 var EmptyCell = exports.EmptyCell = function(sym) {

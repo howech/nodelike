@@ -7,6 +7,7 @@ var input = require('./input');
 var vision = require('./vision');
 var colors = require('./colors');
 var win = require('./window');
+var objects = require('./objects');
 
 var main_map;
 var view;
@@ -64,8 +65,11 @@ var update = exports.update = function() {
 		  },
 		  main_map );
 
-    _.each( main_map.getLightSources(), function( source ) {
-	vision.light( source, main_map );
+
+    _.each( player.getLightSources(), function( source ) {
+	var ls = source.getLightSource();
+	ls.position = player.position;
+	vision.light( ls, main_map );
     });
         
     vision.vision( player, view );
@@ -150,18 +154,18 @@ var start = exports.start = function(t) {
     main_map.getCell(10,3).color =  [.8,.6,1];
     main_map.getCell(10,3).enter_tform = 5;
     main_map.getCell(10,3).exit_tform =  4;
-    
+
  
     for(var i = 6; i< 26; i+=2)
 	for(var j = 13; j< 26; j+=2 ) {
 	    var cel=null;
 	    if( i==6 || i == 24 || j == 13 || j == 25 ) {
-		cel = new cell.CandleCell();
-		cel.map = main_map;
+		var loc = main_map.getCell(i,j);
+		var candle = new objects.Candle(loc);
 		if( (i + j) % 3 == 0 ) {
-		    cel.light_candle();
+		    candle.light_candle();
 		} else {
-		    cel.blow_out();
+		    candle.blow_out();
 		}
 	    } else if ( i < 11 || i > 18 || j < 16 || j > 20 ) {
 		cel = new cell.OccludingCell();
@@ -212,6 +216,8 @@ var start = exports.start = function(t) {
 	    );
 
     player = new actor.Actor( main_map );
+    new objects.Candle( player );
+    player.summarizeContents();
 
     main_map.getCell(28,28).enter(player);
     player.position = [28,28];    
