@@ -230,15 +230,19 @@ exports.CandleCell.prototype = _.extend(
 	},
 	blow_out:  function(input) {
 	    this.staticLightSource = false;
-	    this.map.static_light = false;
+	    if( this.map )
+		this.map.static_light = false;
 	    this.color = [.5,.5,.5];
-	    input.cancel();
+	    if( input )
+		input.cancel();
 	},
 	light_candle:  function(input) {
 	    this.staticLightSource = true;
-	    this.map.static_light = false;
+	    if( this.map )
+		this.map.static_light = false;
 	    this.color = [.8,.8,.5];
-	    input.cancel();
+	    if(input)
+		input.cancel();
 	}
     });
 

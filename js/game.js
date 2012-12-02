@@ -157,7 +157,12 @@ var start = exports.start = function(t) {
 	    var cel=null;
 	    if( i==6 || i == 24 || j == 13 || j == 25 ) {
 		cel = new cell.CandleCell();
-		cel.color = [.8,.8,.4];
+		cel.map = main_map;
+		if( (i + j) % 3 == 0 ) {
+		    cel.light_candle();
+		} else {
+		    cel.blow_out();
+		}
 	    } else if ( i < 11 || i > 18 || j < 16 || j > 20 ) {
 		cel = new cell.OccludingCell();
 		var color = [ 0.6, i/30, j / 30 ];
