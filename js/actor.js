@@ -2,6 +2,8 @@ var xforms = require('./xforms');
 var intervals = require('./intervals');
 var portal = require('./portal');
 var memory = require('./memory');
+var _ = require('underscore');
+
 var actorPrototype = {
     move_n: function()  { this.attempt_move( 0,-1); },
     move_s: function()  { this.attempt_move( 0, 1); },
@@ -16,6 +18,11 @@ var actorPrototype = {
     transform: function(t) {
 	this.tform = xforms.xtable[this.tform][t];
 	this.memory.transform(t);
+	_.each( this.contents, function(item) {
+	    if( _.isFunction(item.transform) ) {
+		item.transform(t);
+	    }
+	});
     },
     attempt_move: function(dx,dy) {
 	// check for moving diagonally through through blocking elements
@@ -58,6 +65,60 @@ var actorPrototype = {
 	var p = new portal.Portal( this.container, this);
 	return p;
     },
+    pick_up: function( input ) {
+	var pickups = _.filter( this.container.contents, function(item) { return item.holdable } );
+	
+	var keymap = { z: "cancel",
+		       _handler: function( item ) {
+			   this.actor.take_item( item );
+			   this.cancel();
+		       }
+		     };
+
+	for(i=0;i<25 && i<pickups.length; ++i) {
+	    keymap[ String.fromCharCode( 'a'.charCodeAt(0) + i ) ] = pickups[i];
+	}
+	
+	input.setSelectionKeymap( null, keymap );
+    },
+    drop: function( input ) {
+	var drops = _.filter( this.contents, function(item) { return item.holdable } );
+	
+	var keymap = { z: "cancel",
+		       _handler: function( item ) {
+			   this.actor.drop_item( item );
+			   this.cancel();
+		       }
+		     };
+
+	for(i=0;i<25 && i<drops.length; ++i) {
+	    keymap[ String.fromCharCode( 'a'.charCodeAt(0) + i ) ] = drops[i];
+	}
+	
+	input.setSelectionKeymap( null, keymap );
+    },
+    drop_item: function(item) {
+	item.container.removeContents(item);
+	this.container.addContents(item);
+    },
+    take_item: function( item ) {
+	item.container.removeContents( item );
+	this.addContents( item );
+    },
+    summarizeContents: function() {
+    },
+	    
+    addContents: function( object ) {
+	this.contents.push( object );
+	object.container = this;
+	this.summarizeContents();
+    },
+    removeContents: function( obj ) {
+	this.contents = _.without( this.contents, obj );
+	obj.container = null;
+	this.summarizeContents();
+    },
+
     symbol: '@'
 };
 
@@ -107,6 +168,7 @@ var Actor = exports.Actor = function(map) {
     this.memory = new memory.Memory();
     this.order = -1;
     this.color = [1,1,1];
+    this.contents = [];
 };
 exports.Actor.prototype = actorPrototype;
 

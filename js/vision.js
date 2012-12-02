@@ -103,8 +103,10 @@ exports.View.prototype = {
 		square = self.getSquare( y[0], y[1] );
 	    }
 	    if( blocked ) {
-		square.style = blockedColor + 1 - square.colorIndex;
+		square.colorIndex = blockedColor;
+		square.style = 1;
 	    } else {
+		square.colorIndex = 0;
 		square.style = 1 - square.colorIndex;
 	    }
 	});

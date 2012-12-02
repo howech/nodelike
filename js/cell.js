@@ -11,6 +11,7 @@ var ambientLight = 1;
 var nc;// = require('ncurses');
 
 var cellPrototype = {
+    isCell: true,
     tryExit: function( actor ) {
 	return true;
     },
@@ -145,8 +146,10 @@ var cellPrototype = {
     },
     removeContents: function( obj ) {
 	this.contents = _.without( this.contents, obj );
+	obj.container = null;
 	this.summarizeContents();
     }
+    
 }
 
 var EmptyCell = exports.EmptyCell = function(sym) {

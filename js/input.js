@@ -39,7 +39,9 @@ var playMode_keymap = {
     'p': 'actor.make_portal',
     'z': 'look_mode',
     't': 'target_mode',
-    'a': 'activate_mode'
+    'a': 'activate_mode',
+    ',': 'actor.pick_up',
+    'd': 'actor.drop'
 };
 
 var activateMode_keymap = {
@@ -162,21 +164,31 @@ exports.Input.prototype = {
 	this.window.erase();
 	this.window.label = " " + this.mode + " Mode Commands ";
 	var self = this;
+ 
+
 
 	var command_tree = {};
+	var raw = {};
 
 	_.each( this.keymap, function(f,k) {
-	    var args = f.split('.');
-	    var obj = command_tree;
-	    while(args.length > 0) {
-		var name = args.shift();
-		if( args.length == 0 ) {
-		    obj[name] = obj[name] || [];
-		    obj[name].push(k);
-		} else {
-		    obj[name] = obj[name] || {};
-		    obj = obj[name];
+	    if( k == "_handler" )
+		return;
+
+	    if( _.isString(f) ) {
+		var args = f.split('.');
+		var obj = command_tree;
+		while(args.length > 0) {
+		    var name = args.shift();
+		    if( args.length == 0 ) {
+			obj[name] = obj[name] || [];
+			obj[name].push(k);
+		    } else {
+			obj[name] = obj[name] || {};
+			obj = obj[name];
+		    }
 		}
+	    } else {
+		raw[k] = f.description || f.getDescription(0);
 	    }
 	});
 
@@ -202,8 +214,12 @@ exports.Input.prototype = {
 		print_tree( tree[tname], row, col );
 	    });
 	}
-	
-	print_tree( command_tree, 1, 2);	
+
+	var row = 1;
+	_.each( raw, function(d,k) {
+	    self.window.typeAt( row++, 2, k + ": " +  d );
+	});
+	print_tree( command_tree, row, 2);	
 	this.window.refresh();
     },
     onInput: function() {
@@ -218,17 +234,23 @@ exports.Input.prototype = {
 	    return;
 	}
 
-	var args = action.split('.');
-	var obj = this;
-	while(args.length > 0) {
-	    var name = args.shift();
-	    
-	    if( _.isFunction( obj[ name ] )) {
-		obj = obj[name].call( obj, this );
-	    } else if(_.isObject( obj[name] )) {
-		obj = obj[name];
-	    } else { 
-		args = [];
+	if( _.isString( action ) ) {
+	    var args = action.split('.');
+	    var obj = this;
+	    while(args.length > 0) {
+		var name = args.shift();
+		
+		if( _.isFunction( obj[ name ] )) {
+		    obj = obj[name].call( obj, this );
+		} else if(_.isObject( obj[name] )) {
+		    obj = obj[name];
+		} else { 
+		    args = [];
+		}
+	    }
+	} else {
+	    if( _.isFunction( this.keymap._handler )) {
+		this.keymap._handler.call( this, action );
 	    }
 	}
 
@@ -265,7 +287,7 @@ exports.Input.prototype = {
 	this.enterPlayMode();
     },
     fire: function() {
-	var projectile = this.actor.makePortal();
+	var projectile = this.actor.make_portal();
 	this.view.fire( projectile );
 	this.view.exitTargetMode();
 	this.enterPlayMode();
@@ -279,7 +301,7 @@ exports.Input.prototype = {
 				{ 'z': 'cancel',
 				  'esc': 'cancel' } );
 	this.updateWindow();
-    }
+    },
 }    
    
    

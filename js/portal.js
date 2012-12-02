@@ -3,7 +3,8 @@ var _ = require('underscore');
 
 var Portal = exports.Portal = function(cell,generator) {
     this.symbol = "*";
-    this.color = [ .8,.6,1];
+    this.holdable = true;
+    this.color = [ .8,.4,1];
     if( generator.getLastPortal ) {
 	generator.getLastPortal.target = this;
 	this.target = generator.getLastPortal;
@@ -24,12 +25,10 @@ var Portal = exports.Portal = function(cell,generator) {
 exports.Portal.prototype = _.extend(
     {},
     {
-	transform: function(t) {
-	    
+	transform: function(t) {	    
 	    this.enter_tform = xforms.xtable[xforms.inverse[t]][this.enter_tform];
 	    this.exit_tform = xforms.xtable[ this.exit_tform][t];
 	},
-
 	gateWayTform: function(t) {
 	    if( this.target ) {
 		var limbo = xforms.xtable[t][this.enter_tform];
@@ -54,6 +53,9 @@ exports.Portal.prototype = _.extend(
 	    }
 
 	    var cell = this.target.container;
+	    if( !cell.isCell )
+		return [];
+
 	    var y = [cell.x, cell.y];
 	    var t = this.gateWayTform( job.t );
 	    	    
@@ -67,7 +69,7 @@ exports.Portal.prototype = _.extend(
 	    return true;
 	},
 	enter: function( actor ) {
-	    if( !this.target || !this.target.container ) {
+	    if( !this.target || !this.target.container || !this.target.container.isCell ) {
 		return false;
 	    }
 	    var tcell = this.target.container;
