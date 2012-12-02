@@ -75,7 +75,20 @@ var mapPrototype = {
 	    }
 	});
 	return results;
-    }		 		
+    },
+    getActiveCreatures: function() {
+	var results = [];
+	this.each( function(cell) {
+	    if(cell.creatures) {
+		_.each(cell.creatures, function(creature) {
+		    if(creature.awake)
+			results.push(creature);
+		});
+	    }
+	});
+	return results;
+    }
+		      
 };
 
 exports.Map = function(width, height) {

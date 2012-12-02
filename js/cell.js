@@ -16,6 +16,14 @@ var cellPrototype = {
 	return true;
     },
     tryEnter: function( actor ) {
+	if( this.containsActor ) {
+	    this.contents[0].attacked_by(actor);
+	    return false;
+	}
+	if( this.creatures && this.creatures.length > 0) {
+	    actor.attack( this.creatures[0] );
+	    return false;
+	}
 	var blocker = _.find( this.enterActions, function(item) {
 	    return !item.tryEnter(actor);
 	});
@@ -110,10 +118,28 @@ var cellPrototype = {
 		 color: display_color.color 
 	       };
     },
+    processCreatureRays: function( rayJob ) {
+	var ivs = [];
+	
+	var target = this.containsActor;
+    
+	_.each( this.rayProcessors, function( item ) {
+	    ivs = ivs.concat( item.processRaysIvs(rayJob) );
+	});
+	ivs = ivs.concat( this.processRaysIvs(rayJob)); 
+	
+	return { ivs: ivs,
+		 t: rayJob.t,
+		 target: target,
+	       };
+    },
     processRaysIvs: function( rayJob ) {
 	return [ { i: rayJob.i } ];
     },
-    clearVisible: function() { this.visible = false; },
+    clearVisible: function() { 
+	this.visible = false; 
+	this.wakeUp = false; 
+    },
     setVisible: function()   { this.visible = true;  },
     initialize: function(symbol)  {
 	this.x = -1; this.y = -1;
@@ -134,6 +160,7 @@ var cellPrototype = {
     summarizeContents: function() {
 	var contents = this.contents;
 
+	this.containsActor = _.any( contents, function(item) { return item.isActor; });
 	this.enterActions = _.select( contents, function(item) { return item.enterAction });
 	this.rayProcessors = _.select( contents, function(item) { return item.enterAction });
 
@@ -143,6 +170,8 @@ var cellPrototype = {
 
 	if( lsCount != newLScount ) 
 	    this.map.static_light = false;
+
+	this.creatures = _.select( contents, function(item) { return item.isCreature });
     },
 	    
     addContents: function( object ) {

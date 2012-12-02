@@ -147,6 +147,14 @@ var actorPrototype = {
 	obj.container = null;
 	this.summarizeContents();
     },
+    attack: function(creature) {
+	this.textWin.typeAt( 1,1, "You try to attack " + creature.description );
+	this.textWin.refresh();
+    },
+    attacked_by: function(creature) {
+	this.textWin.typeAt( 2,1, "You are attacked by " + creature.description );
+	this.textWin.refresh();
+    },
 
     symbol: '@'
 };
@@ -189,7 +197,7 @@ exports.Lantern.prototype = {
     }
 }
 
-var Actor = exports.Actor = function(map) { 
+var Actor = exports.Actor = function(map,textWin) { 
     this.position = [-1,-1];
     this.map = map;
     this.lantern = new Lantern();
@@ -198,6 +206,8 @@ var Actor = exports.Actor = function(map) {
     this.order = -1;
     this.color = [1,1,1];
     this.contents = [];
+    this.isActor = true;
+    this.textWin = textWin;
 };
 exports.Actor.prototype = actorPrototype;
 

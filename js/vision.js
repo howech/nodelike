@@ -418,9 +418,18 @@ var vision = exports.vision = function (actor, view) {
 	
 	if(!view.inView( N,M ))
 	    continue;
-	
-	if( N * N + M * M > (actor.range || 100) )
+	var range = N*N+M*M;
+
+	if( range > (actor.range || 100) )
 	    continue;
+	
+	if( !cell.wakeUp && cell.creatures && cell.creatures.length > 0 ) {
+	    cell.wakeUp = true;
+	    _.each( cell.creatures, function( creature ) {
+		creature.wake_up( range );
+	    });
+	}
+		  
 	
 	var processedRays;
 	    
@@ -542,5 +551,65 @@ var light = exports.light = function (light_source, map) {
 		}
 	    });
 	});
+    }
+}
+
+var creatureVision = exports.creatureVision = function (creature, map) {
+    var queue = [];
+    var initial_interval = [-Math.PI, Math.PI ];
+    var d = [ creature.position[0], creature.position[1] ];
+        var firstJob = { map: map,
+			 i: initial_interval,
+			 x: [0,0], 
+			 t: creature.tform, 
+			 d: d,
+			 c: 1
+		       };
+    queue.push( firstJob );
+    var target = null;
+    while(queue.length > 0 && !target) {
+	var job = queue.shift();
+	var X = xforms.transform(job.x, job.t, job.d );
+	var cell = job.map.getCell( X );
+
+	if(!cell)
+	    continue;
+
+	var iv = job.i;
+	
+	var N = job.x[0];
+	var M = job.x[1];
+	
+	// check vision radius
+	if( (N * N + M * M) > creature.range )
+	    continue;
+	
+	var processedRays;
+	processedRays = cell.processCreatureRays(job);
+	if( processedRays.target ) {
+	    target = job.x;
+	} else {
+	    _.each( processedRays.ivs, function( iv_plus ) {
+		var exits = raycast.exitIntervals( N, M );
+		_.each( exits, function(exit) {
+		    var newIv = intervals.intersection( iv_plus.i, exit.i );
+		    if(newIv.length > 0) {
+			var newJob =
+			    {i: newIv, 
+			     fl: cell.light, 
+			     x: exit.x,
+			     d: iv_plus.d || job.d,
+			     t: _.isUndefined( iv_plus.t ) ? job.t : iv_plus.t,
+			     c: 1,
+			     map: iv_plus.map || job.map
+			    };
+			queue.push( newJob );
+		    }
+		});
+	    });
+	}
+    }
+    if( target ) {
+	creature.target = target;
     }
 }

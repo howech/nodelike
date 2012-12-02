@@ -8,6 +8,7 @@ var vision = require('./vision');
 var colors = require('./colors');
 var win = require('./window');
 var objects = require('./objects');
+var npc = require('./npc');
 
 var main_map;
 var view;
@@ -46,6 +47,10 @@ var quit = exports.quit = function() {
 var update = exports.update = function() {
     main_map.clearVisible();
     main_map.clearLight();
+
+    _.each( main_map.getActiveCreatures(), function(creature) {
+	creature.take_turn();
+    });
 
     if( player.lantern.on ) {
 	vision.light( { interval: player.lantern.interval,
@@ -155,7 +160,10 @@ var start = exports.start = function(t) {
     main_map.getCell(10,3).enter_tform = 5;
     main_map.getCell(10,3).exit_tform =  4;
 
- 
+    var creature = new npc.Creature( main_map.getCell( 20,3) );
+    creature.awake = false;
+    creature.position = [20,3];
+
     for(var i = 6; i< 26; i+=2)
 	for(var j = 13; j< 26; j+=2 ) {
 	    var cel=null;
@@ -215,7 +223,7 @@ var start = exports.start = function(t) {
 	      }
 	    );
 
-    player = new actor.Actor( main_map );
+    player = new actor.Actor( main_map, textWin );
     new objects.Candle( player );
     player.summarizeContents();
 
